@@ -1,0 +1,4 @@
+//this outputs a message to the vcan0 socket (must be initialized prior)
+//the COB_ID == 0x23, the CAN_MSG_DATA == 5E, the RTR == ERR == false
+
+cargo run vcan0 23 5E false false
