@@ -6,6 +6,10 @@ fn main() {
     destroy_bus("vcan0");
 }
 
+/// Create a vcan bus using the following commands:
+/// sudo ip link add dev <name> type vcan
+/// sudo ip link set up <name>
+/// This function will panic if errors are returned
 fn create_bus(name: &str)
 {
     let output = Command::new("sudo")
@@ -41,6 +45,9 @@ fn create_bus(name: &str)
     }
 }
 
+/// Destroy a vcan bus using the following commands:
+/// sudo ip link del dev <name>
+/// This function will panic if errors are returned
 fn destroy_bus(name: &str)
 {
     let output = Command::new("sudo")
