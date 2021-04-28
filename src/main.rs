@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::io::{self, Write};
+use std::process::Command;
 
 fn main() {
     create_bus("vcan0");
@@ -10,36 +10,33 @@ fn main() {
 /// sudo ip link add dev <name> type vcan
 /// sudo ip link set up <name>
 /// This function will panic if errors are returned
-fn create_bus(name: &str)
-{
+fn create_bus(name: &str) {
     let output = Command::new("sudo")
-    .arg("ip")
-    .arg("link")
-    .arg("add")
-    .arg("dev")
-    .arg(name)
-    .arg("type")
-    .arg("vcan")
-    .output()
-    .expect("failed to execute process");
+        .arg("ip")
+        .arg("link")
+        .arg("add")
+        .arg("dev")
+        .arg(name)
+        .arg("type")
+        .arg("vcan")
+        .output()
+        .expect("failed to execute process");
 
-    if output.stderr.len() > 0
-    {
+    if !output.stderr.is_empty() {
         io::stderr().write_all(&output.stderr).unwrap();
-        panic!("Unable create bus {}, it may already be created", name)
+        panic!("Unable to create bus {}, it may already be created", name)
     }
 
     let output = Command::new("sudo")
-    .arg("ip")
-    .arg("link")
-    .arg("set")
-    .arg(name)
-    .arg("up")
-    .output()
-    .expect("failed to execute process");
+        .arg("ip")
+        .arg("link")
+        .arg("set")
+        .arg(name)
+        .arg("up")
+        .output()
+        .expect("failed to execute process");
 
-    if output.stderr.len() > 0
-    {
+    if !output.stderr.is_empty() {
         io::stderr().write_all(&output.stderr).unwrap();
         panic!("Unable to bring up bus {}", name)
     }
@@ -48,19 +45,17 @@ fn create_bus(name: &str)
 /// Destroy a vcan bus using the following commands:
 /// sudo ip link del dev <name>
 /// This function will panic if errors are returned
-fn destroy_bus(name: &str)
-{
+fn destroy_bus(name: &str) {
     let output = Command::new("sudo")
-    .arg("ip")
-    .arg("link")
-    .arg("del")
-    .arg("dev")
-    .arg(name)
-    .output()
-    .expect("failed to execute process");
+        .arg("ip")
+        .arg("link")
+        .arg("del")
+        .arg("dev")
+        .arg(name)
+        .output()
+        .expect("failed to execute process");
 
-    if output.stderr.len() > 0
-    {
+    if !output.stderr.is_empty() {
         io::stderr().write_all(&output.stderr).unwrap();
         panic!("Unable to destroy bus {}", name)
     }
