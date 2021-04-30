@@ -36,13 +36,12 @@ fn main() {
         let test = [data];
         create_frame_send_msg(cs, cob_id, &test, rtr, err);
     }
-
 }
 
 fn create_frame_send_msg(cs: CANSocket, cob_id: u32, data: &[u8], rtr: bool, err: bool) {
-        //outputting a can message to the user chosen socket, with the given values
-        let frame = CANFrame::new(cob_id, data, rtr, err).unwrap();
-        cs.write_frame(&frame).unwrap();
+    //outputting a can message to the user chosen socket, with the given values
+    let frame = CANFrame::new(cob_id, data, rtr, err).unwrap();
+    cs.write_frame(&frame).unwrap();
 }
 
 /// Create a vcan bus using the following commands:
