@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 socketcan = "1.7.0"
 rand = "0.8.3"
+clap = "2.33.0"
+chrono = "0.4.19"
