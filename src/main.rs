@@ -10,66 +10,77 @@ use std::{thread, time};
 
 fn main() {
     let matches = App::new("Rusty Can Fuzzer")
-                        .version("0.1")
-                        .author(crate_authors!())
-                        .about("A CAN Bus fuzzer CLI written in rust")
-                        .arg(Arg::with_name("channels")
-                            .short("c")
-                            .long("channels")    
-                            .value_name("CHANNEL")
-                            .help("The channel to create and send CAN messages on")
-                            .takes_value(true)
-                            .multiple(true)
-                            .default_value("vcan0")
-                            )
-                        .arg(Arg::with_name("delay")
-                            .short("d")
-                            .long("delay")
-                            .value_name("DELAY")
-                            .help("Adjust the message-send delay time, used in conjunction with -r")
-                            .takes_value(true)
-                            .default_value("1")    
-                            )
-                        .arg(Arg::with_name("id")
-                            .short("i")
-                            .long("id")
-                            .value_name("ID")
-                            .help("The COB ID to use for the messages")
-                            .takes_value(true)
-                            .default_value("10")
-                            )
-                        .arg(Arg::with_name("destroy")
-                            .short("n")
-                            .long("no-destroy")
-                            .help("Stop rusty-can-dev from destroying the channel at end of life")
-                            .takes_value(false)
-                            )
-                        .arg(Arg::with_name("message")
-                            .short("m")
-                            .long("message")
-                            .value_name("BYTE")
-                            .help("The 8 bytes to send as the CAN message")
-                            .multiple(true)
-                            .takes_value(true)
-                            .default_value("1")
-                            )
-                        .arg(Arg::with_name("repeat")
-                            .short("r")
-                            .long("repeat")
-                            .value_name("N")
-                            .help("Repeat sending the message N times or \"\" for infinite times, every so oftern defined by -d, using in conjunction with -d")
-                            .takes_value(true)
-                            .allow_hyphen_values(true)
-                            )
-                        .arg(Arg::with_name("random_id")
-                            .long("random-id")
-                            .help("Use a randomly generated ID (this diables -i)")
-                            )
-                        .arg(Arg::with_name("random_message")
-                            .long("random-message")
-                            .help("Use a randomly generated message (this disables -m)")
-                            )
-                        .get_matches();
+        .version("0.1")
+        .author(crate_authors!())
+        .about("A CAN Bus fuzzer CLI written in rust")
+        .arg(
+            Arg::with_name("channels")
+                .short("c")
+                .long("channels")
+                .value_name("CHANNEL")
+                .help("The channel to create and send CAN messages on")
+                .takes_value(true)
+                .multiple(true)
+                .default_value("vcan0"),
+        )
+        .arg(
+            Arg::with_name("delay")
+                .short("d")
+                .long("delay")
+                .value_name("DELAY")
+                .help("Adjust the message-send delay time, used in conjunction with -r")
+                .takes_value(true)
+                .default_value("1"),
+        )
+        .arg(
+            Arg::with_name("id")
+                .short("i")
+                .long("id")
+                .value_name("ID")
+                .help("The COB ID to use for the messages")
+                .takes_value(true)
+                .default_value("10"),
+        )
+        .arg(
+            Arg::with_name("destroy")
+                .short("n")
+                .long("no-destroy")
+                .help("Stop rusty-can-dev from destroying the channel at end of life")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("message")
+                .short("m")
+                .long("message")
+                .value_name("BYTE")
+                .help("The 8 bytes to send as the CAN message")
+                .multiple(true)
+                .takes_value(true)
+                .default_value("1"),
+        )
+        .arg(
+            Arg::with_name("repeat")
+                .short("r")
+                .long("repeat")
+                .value_name("N")
+                .help(
+                    "Repeat sending the message N times or -1 for infinite times, \
+                     every so often defined by -d, using in conjunction with -d",
+                )
+                .takes_value(true)
+                .allow_hyphen_values(true),
+        )
+        .arg(
+            Arg::with_name("random_id")
+                .long("random-id")
+                .help("Use a randomly generated ID (this disables -i)"),
+        )
+        .arg(
+            Arg::with_name("random_message")
+                .long("random-message")
+                .help("Use a randomly generated message (this disables -m)"),
+        )
+        .get_matches();
 
     let channels: Vec<&str> = matches.values_of("channels").unwrap().collect();
     let delay: u64 = matches
@@ -91,7 +102,8 @@ fn main() {
 
     let repeat: i64 = match matches.value_of("repeat").unwrap_or("1").parse() {
         Ok(v) if v < -1 => panic!(
-            "Unable to parse repeat value, should be a postitive integer value, {} provided",
+            "Unable to parse repeat value, should be a postitive integer value \
+             (or -1 for infinite repeat), {} provided",
             v
         ),
         Ok(v) => v,
