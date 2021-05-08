@@ -88,10 +88,10 @@ fn main() {
         .unwrap()
         .parse()
         .expect("Unable to parse delay value, should be a positive integer value");
-    let id: u32 = u32::from_str_radix(matches.value_of("id").unwrap(), 16)
+    let mut id: u32 = u32::from_str_radix(matches.value_of("id").unwrap(), 16)
         .expect("Unable to parse id, should be a 32bit integer value");
     let destroy: bool = !matches.is_present("destroy");
-    let message_parsed: Vec<u8> = matches
+    let mut message_parsed: Vec<u8> = matches
         .values_of("message")
         .unwrap()
         .map(|x| {
@@ -113,10 +113,6 @@ fn main() {
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
 
-    if random_id || random_message {
-        panic!("Random id and random message not yet implemented!")
-    }
-
     //Setup bus and socket objects
     let mut sockets = Vec::new();
     for channel in &channels {
@@ -136,6 +132,13 @@ fn main() {
     // Send messages repeat times
     for _ in 0..repeat {
         for socket in &sockets {
+            if random_id {
+                id = random_cob_id()
+            }
+
+            if random_message {
+                message_parsed = random_msg()
+            }
             create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
         }
         thread::sleep(delay_seconds);
@@ -145,6 +148,13 @@ fn main() {
     if repeat == -1 {
         loop {
             for socket in &sockets {
+                if random_id {
+                    id = random_cob_id()
+                }
+
+                if random_message {
+                    message_parsed = random_msg()
+                }
                 create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
             }
             thread::sleep(delay_seconds);
@@ -164,18 +174,11 @@ fn random_cob_id() -> u32 {
     rng.gen_range(0..2_021)
 }
 
-fn random_msg() -> [u8; 8] {
+fn random_msg() -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    let mut data: [u8; 8] = [0; 8];
-    data[0] = rng.gen_range(0..255);
-    data[1] = rng.gen_range(0..255);
-    data[2] = rng.gen_range(0..255);
-    data[3] = rng.gen_range(0..255);
-    data[4] = rng.gen_range(0..255);
-    data[5] = rng.gen_range(0..255);
-    data[6] = rng.gen_range(0..255);
-    data[7] = rng.gen_range(0..255);
+    let data: Vec<u8> = (0..8).map(|_| rng.gen_range(0..255)).collect();
     data
+}
 
 //outputting a can message to the user chosen socket, with the given values
 fn create_frame_send_msg(
