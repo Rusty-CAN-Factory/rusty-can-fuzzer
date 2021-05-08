@@ -6,7 +6,6 @@ use std::io::{self, Write};
 use std::process::Command;
 
 fn main() {
-
     let test_cob_id = random_cob_id();
     let test_msg = random_msg();
 
@@ -99,4 +98,3 @@ fn destroy_bus(name: &str) {
         panic!("Unable to destroy bus {}", name)
     }
 }
-
