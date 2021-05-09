@@ -1,10 +1,12 @@
-use rand::Rng;
-use socketcan::*;
+pub mod msg_processor; //need to declare a module before using
+//use crate::msg_processor::*; //don't need the explicit "crate"
+use msg_processor::*;
+use socketcan::*; //needed in msg_processor as well
 use std::io::{self, Write};
 use std::process::Command;
 #[macro_use]
 extern crate clap;
-use chrono::Utc;
+//use chrono::Utc; //needed in msg_processor, but not here
 use clap::{App, Arg};
 use std::{thread, time};
 
@@ -169,36 +171,42 @@ fn main() {
     }
 }
 
-fn random_cob_id() -> u32 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(0..2_021)
-}
+//commenting out instead of deleting entirely, 
+//in case we have problems
+//fn random_cob_id() -> u32 {
+//    let mut rng = rand::thread_rng();
+//    rng.gen_range(0..2_021)
+//}
 
-fn random_msg() -> Vec<u8> {
-    let mut rng = rand::thread_rng();
-    let data: Vec<u8> = (0..8).map(|_| rng.gen_range(0..255)).collect();
-    data
-}
+//commenting out instead of deleting entirely, 
+//in case we have problems
+//fn random_msg() -> Vec<u8> {
+//    let mut rng = rand::thread_rng();
+//    let data: Vec<u8> = (0..8).map(|_| rng.gen_range(0..255)).collect();
+//    data
+//}
 
-//outputting a can message to the user chosen socket, with the given values
-fn create_frame_send_msg(
-    cs: &CANSocket,
-    channel: &str,
-    cob_id: u32,
-    data: &[u8],
-    rtr: bool,
-    err: bool,
-) {
-    let frame = CANFrame::new(cob_id, data, rtr, err).unwrap();
-    cs.write_frame(&frame).unwrap();
-    println!(
-        "{0:<30} {1:<8} {2:<10} {3:<25}",
-        Utc::now().naive_local().format("[%a %b %e %H:%M:%S %Y]:"),
-        channel,
-        format!("0x{:03X?}", cob_id),
-        format!("{:02X?}", data)
-    );
-}
+//commenting out instead of deleting entirely, 
+//in case we have problems
+////outputting a can message to the user chosen socket, with the given values
+//fn create_frame_send_msg(
+//    cs: &CANSocket,
+//    channel: &str,
+//    cob_id: u32,
+//    data: &[u8],
+//    rtr: bool,
+//    err: bool,
+//) {
+//    let frame = CANFrame::new(cob_id, data, rtr, err).unwrap();
+//    cs.write_frame(&frame).unwrap();
+//    println!(
+//        "{0:<30} {1:<8} {2:<10} {3:<25}",
+//        Utc::now().naive_local().format("[%a %b %e %H:%M:%S %Y]:"),
+//        channel,
+//        format!("0x{:03X?}", cob_id),
+//        format!("{:02X?}", data)
+//    );
+//}
 
 /// Create a vcan bus using the following commands:
 /// sudo ip link add dev <name> type vcan
