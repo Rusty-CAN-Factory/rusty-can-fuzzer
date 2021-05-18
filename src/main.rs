@@ -1,4 +1,5 @@
 pub mod can_bus;
+pub mod json_config;
 pub mod msg_processor;
 use can_bus::*;
 use msg_processor::*;
