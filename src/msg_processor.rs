@@ -82,6 +82,7 @@ pub fn create_frame_send_msg(
 }
 
 pub fn msg_processor() -> u64 {
+    let sec_result;
     let test_section = Section {
         name: "TestSec#1",
         num_bytes: 1,
@@ -104,7 +105,12 @@ pub fn msg_processor() -> u64 {
         is_specified: false,
         specified_val: 0,
     };
-    section_proc(&test_section);
+    sec_result = section_proc(&test_section);
+    //note to self:
+    //needs to be adjusted to change the X in ":#Xb" to fit the
+    //number of bits/bytes in a section, it seems having 2 more
+    //the number of bits helps (leaves room for "0b")
+    println!("Complete section result (bin): {:#10b} ", sec_result);
     1
 }
 
@@ -116,17 +122,31 @@ pub fn section_proc(section: &Section) -> u64 {
     //    is_specified: false,
     //    specified_val: 0,
     //};
-    let mut result;
+    let mut prev_sub_sec_result = 0;
+    let mut sub_sec_result;
+    let mut result = 0;
+    let mut has_looped = false;
     for i in 0..section.sub_secs.len() {
         println!("########");
         println!("test_sub_sec values: ");
         section.sub_secs[i].display();
         println!();
-        result = sub_sec_proc(&section.sub_secs[i]);
-        println!("sub_sec_proc result (dec): {} ", result);
-        println!("sub_sec_proc result (bin): {:#06b} ", result);
+        sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
+        println!("sub_sec_proc result (dec): {} ", sub_sec_result);
+        println!("sub_sec_proc result (bin): {:#10b} ", sub_sec_result);
+        //MAY NOT NEED THIS CHECK, since the above for loop should take care of it
+        //if(section.sub_secs[i+1].exists()) {
+        if i < section.sub_secs.len() && has_looped {
+            //shifting the bits to make room for the new result
+            result = prev_sub_sec_result << section.sub_secs[i].num_bits;
+        }
+        //ORing to add the new result on the end
+        result = result | sub_sec_result;
+        println!("Current section_proc result (bin): {:#10b} ", result);
+        prev_sub_sec_result = sub_sec_result;
+        has_looped = true;
     }
-    1
+    result as u64
 }
 
 pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
