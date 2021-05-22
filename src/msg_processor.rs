@@ -2,8 +2,6 @@ use chrono::Utc;
 use rand::Rng;
 use socketcan::*;
 use core::ops::Range; //for COB_ID range
-//https://stackoverflow.com/a/44690529 //for printing as binary
-//https://stackoverflow.com/a/55494303 //for adding underscores to bin out
 
 pub struct SubSec<'a> {
     name: &'a str,
@@ -168,129 +166,87 @@ pub fn msg_processor() -> (u64,u64) {
         is_specified: false,
         specified_val: 0,
     };
-    //let test_section = Section {
-    //    name: "TestSec#1",
-    //    num_bytes: 1,
-    //    sub_secs: &[
-    //        SubSec {
-    //            name: "TestSubSec#1",
-    //            num_bits: 3,
-    //            holes: &[1,2],
-    //            is_specified: false,
-    //            specified_val: 0,
-    //        },
-    //        SubSec {
-    //            name: "TestSubSec#2",
-    //            num_bits: 5,
-    //            holes: &[5,6],
-    //            is_specified: false,
-    //            specified_val: 0,
-    //        },
-    //    ],
-    //    is_specified: false,
-    //    specified_val: 0,
-    //};
-    let mut prev_sec_result = 0;
+    //let mut prev_sec_result = 0;
     let mut sec_result;
     let mut result = 0;
-    let mut has_looped = false;
+    //let mut has_looped = false;
     let mut width;
+    let mut hex_cnt;
     for i in 0..test_msg_format.sections.len() {
         println!("<#-{}-#>", i+1);
-        //println!("test_section values: ");
         test_msg_format.sections[i].display();
         println!();
         sec_result = section_proc(&test_msg_format.sections[i]);
-        //println!("section_proc result (dec): {} ", sec_result);
-        //println!("section_proc result (bin): {:#10b} ", sec_result);
         //MAY NOT NEED THIS CHECK, since the above for loop should take care of it
         //if(section.sub_secs[i+1].exists()) {
-        if i < test_msg_format.sections.len() && has_looped {
+        //if i < test_msg_format.sections.len() && has_looped {
             //shifting the bits to make room for the new result
-            result = prev_sec_result << test_msg_format.sections[i].num_bytes*8;
-        }
+            result = result << test_msg_format.sections[i].num_bytes*8;
+        //}
         //ORing to add the new result on the end
         result = result | sec_result;
         println!("<#-{}-#>", i+1);
         width = (i+1)*8;
-        //println!("\tCurrent msg_processor result (bin): {:#10b} ", result);
         println!("\tCurrent msg_processor result (bin): {} bits\n\t{result:#0width$b} ",
                  width, result=result, width=width+2);
-        prev_sec_result = sec_result;
-        has_looped = true;
+        hex_cnt = (width)/4;
+        println!("\tComplete msg_processor result (hex): {} hexits\n\t{result:#0width$X} ",
+                 hex_cnt, result=result, width=(hex_cnt as usize)+2);
+        //prev_sec_result = sec_result;
+        //has_looped = true;
     }
     println!("<#-END-#>");
-    let width = test_msg_format.sections.len()*8;
+    width = test_msg_format.sections.len()*8;
     //note to self:
     //it seems having 2 more the number of bits helps (leaves room for "0b")
     //(needs more testing to be sure)
     println!("Complete msg_processor result (bin): {} bits\n{result:#0width$b}",
              width, result=result, width=width+2);
+    hex_cnt = (width)/4;
+    println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
+             hex_cnt, result=result, width=(hex_cnt as usize)+2);
     (random_cob_id() as u64, result as u64)
 }
 
 pub fn section_proc(section: &Section) -> u64 {
-    //let test_sub_sec = SubSec {
-    //    name: "TestSubSec#0",
-    //    num_bits: 3,
-    //    holes: &[1,2],
-    //    is_specified: false,
-    //    specified_val: 0,
-    //};
-    let mut prev_sub_sec_result = 0;
+    //let mut prev_sub_sec_result = 0;
     let mut sub_sec_result;
     let mut result = 0;
-    let mut has_looped = false;
+    //let mut has_looped = false;
     let mut bit_cnt = 0;
     let mut hex_cnt;
     for i in 0..section.sub_secs.len() {
         bit_cnt += section.sub_secs[i].num_bits;
         println!("##{}", i+1);
-        //println!("test_sub_sec values: ");
         section.sub_secs[i].display();
         println!();
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
         //MAY NOT NEED THIS CHECK, since the above for loop should take care of it
         //if(section.sub_secs[i+1].exists()) {
-        if i < section.sub_secs.len() && has_looped {
+        //if i < section.sub_secs.len() && has_looped {
+        //if i < section.sub_secs.len() {
             //shifting the bits to make room for the new result
-            result = prev_sub_sec_result << section.sub_secs[i].num_bits;
-        }
+            result = result << section.sub_secs[i].num_bits;
+        //}
         //ORing to add the new result on the end
         result = result | sub_sec_result;
         println!("##{}", i+1);
-        //println!("\tCurrent section_proc result (bin): {:#10b} ", result);
-        //println!("\tCurrent section_proc result (bin): {} bits |{result:#width$b} ",
-        //         (i+1)*4, result=result, width=(i+1)*8+2);
-        //println!("\tCurrent section_proc result (bin): {} bits |{result:#width$b} ",
-        //         section.sub_secs[i].num_bits, result=result, 
-        //         width=(section.sub_secs[i].num_bits as usize)+2);
         println!("\tCurrent section_proc result (bin): {} bits |{result:#0width$b} ",
                  bit_cnt, result=result, width=(bit_cnt as usize)+2);
         //need "+2" because if for example bit_cnt is 1, dividing it by 4 results in 0
-        //(a 1 bit value is surely still a 1 hexit value
+        //(a 1 bit value is surely still a 1 hexit value, "+2" pushes it up so it works)
         hex_cnt = (bit_cnt+2)/4;
-        //println!("\tCurrent section_proc result (hex): {:#10X} ", result);
-        //println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
-        //         (bit_cnt/4), result=result, width=(bit_cnt/4) as usize);
         println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
                  hex_cnt, result=result, width=(hex_cnt as usize)+2);
-        prev_sub_sec_result = sub_sec_result;
-        has_looped = true;
+        //prev_sub_sec_result = sub_sec_result;
+        //has_looped = true;
     }
     result as u64
 }
 
 pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     let mut rng = rand::thread_rng();
-    //-2 instead of -1 because for example 3^2-1=8,
-    //but we can only fit up to 7 in 3 bits
-    //let range = sub_sec.num_bits.pow(2)-2;
-    //this seems to have been because I screwed up and
-    //mixed up the base and the exponent
-    //tentative fix
     let range = 2_u8.pow(sub_sec.num_bits as u32)-1;
-    //first generation
     let mut result = rng.gen_range(0..range);
     println!("sub_sec_proc range: {} ", range);
     while sub_sec.holes.contains(&result) {
@@ -300,7 +256,6 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
         result = rng.gen_range(0..range);
     }
     println!("\tsub_sec_proc result (dec): {} ", result);
-    //println!("sub_sec_proc result (bin): {:#10b} ", sub_sec_result);
     println!("\tsub_sec_proc result (bin): {} bits |{result:#0width$b} ",
              sub_sec.num_bits, result=result, width=(sub_sec.num_bits as usize)+2);
     result
