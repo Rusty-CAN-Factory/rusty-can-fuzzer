@@ -81,11 +81,6 @@ fn main() {
                 .long("random-message")
                 .help("Use a randomly generated message (this disables -m)"),
         )
-        .arg(
-            Arg::with_name("test_msg_processor")
-                .long("test-msg-processor")
-                .help("Debug: Used to test msg_processor module"),
-        )
         .get_matches();
 
     let channels: Vec<String> = matches
@@ -122,7 +117,6 @@ fn main() {
 
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
-    let test_msg_processor: bool = matches.is_present("test_msg_processor");
 
     // Create Handler for keyboard interrupt signal
     // This will cleanup bus
@@ -183,10 +177,6 @@ fn main() {
             }
             thread::sleep(delay_seconds);
         }
-    }
-
-    if test_msg_processor {
-        msg_processor();
     }
 
     // Tear down bus

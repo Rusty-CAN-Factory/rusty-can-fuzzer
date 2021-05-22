@@ -109,97 +109,33 @@ pub fn create_frame_send_msg(
     );
 }
 
-//returns a tuple, COB_ID and MSG
-//tentative
-//pub fn msg_processor(msg_format: &MsgFormat) -> (u64,u64) {
-pub fn msg_processor() -> (u64,u64) {
-    let test_msg_format = MsgFormat {
-        name: "TestMsgFormat#1",
-        cob_id_range: { 0..9999 },
-        num_sections: 2,
-        sections: &[
-            Section {
-                name: "TestSec#1",
-                num_bytes: 1,
-                sub_secs: &[
-                    SubSec {
-                        name: "TestSubSec#1",
-                        num_bits: 3,
-                        holes: &[1,2],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "TestSubSec#2",
-                        num_bits: 5,
-                        holes: &[5,6],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                ],
-                is_specified: false,
-                specified_val: 0,
-            },
-            Section {
-                name: "TestSec#2",
-                num_bytes: 1,
-                sub_secs: &[
-                    SubSec {
-                        name: "TestSubSec#3",
-                        num_bits: 6,
-                        holes: &[1,2],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "TestSubSec#4",
-                        num_bits: 2,
-                        holes: &[],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                ],
-                is_specified: false,
-                specified_val: 0,
-            },
-        ],
-        is_specified: false,
-        specified_val: 0,
-    };
-    //let mut prev_sec_result = 0;
+//returns a tuple, (COB_ID,MSG)
+pub fn msg_processor(msg_format: &MsgFormat) -> (u64,u64) {
     let mut sec_result;
     let mut result = 0;
-    //let mut has_looped = false;
     let mut width;
     let mut hex_cnt;
-    for i in 0..test_msg_format.sections.len() {
+    for i in 0..msg_format.sections.len() {
         println!("<#-{}-#>", i+1);
-        test_msg_format.sections[i].display();
+        msg_format.sections[i].display();
         println!();
-        sec_result = section_proc(&test_msg_format.sections[i]);
-        //MAY NOT NEED THIS CHECK, since the above for loop should take care of it
-        //if(section.sub_secs[i+1].exists()) {
-        //if i < test_msg_format.sections.len() && has_looped {
-            //shifting the bits to make room for the new result
-            result = result << test_msg_format.sections[i].num_bytes*8;
-        //}
+        sec_result = section_proc(&msg_format.sections[i]);
+        //shifting the bits to make room for the new result
+        result = result << msg_format.sections[i].num_bytes*8;
         //ORing to add the new result on the end
         result = result | sec_result;
         println!("<#-{}-#>", i+1);
         width = (i+1)*8;
+        //it seems having 2 more than the number of bits helps
+        //(leaves room for "0b")
         println!("\tCurrent msg_processor result (bin): {} bits\n\t{result:#0width$b} ",
                  width, result=result, width=width+2);
         hex_cnt = (width)/4;
         println!("\tComplete msg_processor result (hex): {} hexits\n\t{result:#0width$X} ",
                  hex_cnt, result=result, width=(hex_cnt as usize)+2);
-        //prev_sec_result = sec_result;
-        //has_looped = true;
     }
     println!("<#-END-#>");
-    width = test_msg_format.sections.len()*8;
-    //note to self:
-    //it seems having 2 more the number of bits helps (leaves room for "0b")
-    //(needs more testing to be sure)
+    width = msg_format.sections.len()*8;
     println!("Complete msg_processor result (bin): {} bits\n{result:#0width$b}",
              width, result=result, width=width+2);
     hex_cnt = (width)/4;
@@ -209,10 +145,8 @@ pub fn msg_processor() -> (u64,u64) {
 }
 
 pub fn section_proc(section: &Section) -> u64 {
-    //let mut prev_sub_sec_result = 0;
     let mut sub_sec_result;
     let mut result = 0;
-    //let mut has_looped = false;
     let mut bit_cnt = 0;
     let mut hex_cnt;
     for i in 0..section.sub_secs.len() {
@@ -221,13 +155,8 @@ pub fn section_proc(section: &Section) -> u64 {
         section.sub_secs[i].display();
         println!();
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
-        //MAY NOT NEED THIS CHECK, since the above for loop should take care of it
-        //if(section.sub_secs[i+1].exists()) {
-        //if i < section.sub_secs.len() && has_looped {
-        //if i < section.sub_secs.len() {
-            //shifting the bits to make room for the new result
-            result = result << section.sub_secs[i].num_bits;
-        //}
+        //shifting the bits to make room for the new result
+        result = result << section.sub_secs[i].num_bits;
         //ORing to add the new result on the end
         result = result | sub_sec_result;
         println!("##{}", i+1);
@@ -238,8 +167,6 @@ pub fn section_proc(section: &Section) -> u64 {
         hex_cnt = (bit_cnt+2)/4;
         println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
                  hex_cnt, result=result, width=(hex_cnt as usize)+2);
-        //prev_sub_sec_result = sub_sec_result;
-        //has_looped = true;
     }
     result as u64
 }
@@ -260,3 +187,96 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
              sub_sec.num_bits, result=result, width=(sub_sec.num_bits as usize)+2);
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn msg_processor_test() {
+        let test_can_id_msg: (u64,u64);
+        //let test_can_msg;
+        let test_msg_format = MsgFormat {
+            name: "TestMsgFormat#1",
+            cob_id_range: { 0..9999 },
+            num_sections: 2,
+            sections: &[
+                Section {
+                    name: "TestSec#1",
+                    num_bytes: 1,
+                    sub_secs: &[
+                        SubSec {
+                            name: "TestSubSec#1",
+                            num_bits: 3,
+                            holes: &[1,2],
+                            is_specified: false,
+                            specified_val: 0,
+                        },
+                        SubSec {
+                            name: "TestSubSec#2",
+                            num_bits: 5,
+                            holes: &[5,6],
+                            is_specified: false,
+                            specified_val: 0,
+                        },
+                    ],
+                    is_specified: false,
+                    specified_val: 0,
+                },
+                Section {
+                    name: "TestSec#2",
+                    num_bytes: 1,
+                    sub_secs: &[
+                        SubSec {
+                            name: "TestSubSec#3",
+                            num_bits: 6,
+                            holes: &[1,2],
+                            is_specified: false,
+                            specified_val: 0,
+                        },
+                        SubSec {
+                            name: "TestSubSec#4",
+                            num_bits: 2,
+                            holes: &[],
+                            is_specified: false,
+                            specified_val: 0,
+                        },
+                    ],
+                    is_specified: false,
+                    specified_val: 0,
+                },
+            ],
+            is_specified: false,
+            specified_val: 0,
+        };
+        let mut width;
+        let mut hex_cnt;
+        test_can_id_msg = msg_processor(&test_msg_format);
+        width = 12;
+        hex_cnt = (width)/4;
+        println!("--------");
+        println!("Returned msg_processor can_id (bin): {} bits\n{result:#0width$b}",
+                 width, result=test_can_id_msg.0, width=width+2);
+        println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
+                 hex_cnt, result=test_can_id_msg.0, width=(hex_cnt as usize)+2);
+        width = test_msg_format.sections.len()*8;
+        hex_cnt = (width)/4;
+        println!("Returned msg_processor can_msg (bin): {} bits\n{result:#0width$b}",
+                 width, result=test_can_id_msg.1, width=width+2);
+        println!("Returned msg_processor can_msg (hex): {} hexits\n{result:#0width$X} ",
+                 hex_cnt, result=test_can_id_msg.1, width=(hex_cnt as usize)+2);
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+

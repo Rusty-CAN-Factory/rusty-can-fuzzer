@@ -8,3 +8,5 @@ A rust based CAN message fuzzer.
 # View Help to see all options
 `$` `clear && cargo run -- -h`
 
+Run **cargo test** like so:
+> cargo test -- --nocapture
