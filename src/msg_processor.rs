@@ -2,6 +2,7 @@ use chrono::Utc;
 use rand::Rng;
 use socketcan::*;
 use core::ops::Range; //for COB_ID range
+use rand::distributions::uniform::SampleRange;
 
 pub struct SubSec<'a> {
     name: &'a str,
@@ -14,9 +15,9 @@ pub struct SubSec<'a> {
 
 impl<'a> SubSec<'a> {
     pub fn display(self: &Self) {
-        println!("{}: \n\
-                  num_bits {}, holes {:?}, \n\
-                  is_specified {}, specified_val {}",
+        println!("\t\t{}: \n\
+                  \t\tnum_bits {}, holes {:?}, \n\
+                  \t\tis_specified {}, specified_val {}",
                   self.name,
                   self.num_bits, self.holes, self.is_specified,
                   self.specified_val);
@@ -33,9 +34,8 @@ pub struct Section<'a> {
 
 impl<'a> Section<'a> {
     pub fn display(self: &Self) {
-        println!("{}: \n\
-                  num_bytes {}, is_specified {}, \
-                  specified_val {}",
+        println!("\t{}: \n\
+                  \tnum_bytes {}, is_specified {}, specified_val {}",
                   self.name,
                   self.num_bytes, self.is_specified,
                   self.specified_val);
@@ -45,7 +45,7 @@ impl<'a> Section<'a> {
         //let mut i = 0;
         //for i in self.sub_secs.len() {
         for i in 0..self.sub_secs.len() {
-            println!("SubSec #{}: ", i);
+            println!("\t\tSubSec #{}: ", i);
             self.sub_secs[i].display();
         }
     }
@@ -53,7 +53,7 @@ impl<'a> Section<'a> {
 
 pub struct MsgFormat<'a> {
     name: &'a str,
-    cob_id_range: Range<u64>,
+    cob_id_range: Range<u32>,
     num_sections: u8,
     sections: &'a [Section<'a>],
     is_specified: bool,
@@ -72,15 +72,16 @@ impl<'a> MsgFormat<'a> {
 
     pub fn display_sections(self: &Self) {
         for i in 0..self.sections.len() {
-            println!("Section #{}: ", i);
+            println!("\tSection #{}: ", i);
             self.sections[i].display();
         }
     }
 }
 
-pub fn random_cob_id() -> u32 {
+pub fn random_cob_id(range: &Range<u32>) -> u32 {
     let mut rng = rand::thread_rng();
-    rng.gen_range(0..2_021)
+    //typical range for cob_id is 0..2_021, that was the default before
+    rng.gen_range(range as &SampleRange<u32>)
 }
 
 pub fn random_msg() -> Vec<u8> {
@@ -110,63 +111,63 @@ pub fn create_frame_send_msg(
 }
 
 //returns a tuple, (COB_ID,MSG)
-pub fn msg_processor(msg_format: &MsgFormat) -> (u64,u64) {
+pub fn msg_processor(msg_format: &MsgFormat) -> (u32,u64) {
     let mut sec_result;
     let mut result = 0;
-    let mut width;
-    let mut hex_cnt;
+    //let mut width;
+    //let mut hex_cnt;
     for i in 0..msg_format.sections.len() {
-        println!("<#-{}-#>", i+1);
-        msg_format.sections[i].display();
-        println!();
+        //println!("<#-{}-#>", i+1);
+        //msg_format.sections[i].display();
+        //println!();
         sec_result = section_proc(&msg_format.sections[i]);
         //shifting the bits to make room for the new result
         result = result << msg_format.sections[i].num_bytes*8;
         //ORing to add the new result on the end
         result = result | sec_result;
-        println!("<#-{}-#>", i+1);
-        width = (i+1)*8;
-        //it seems having 2 more than the number of bits helps
-        //(leaves room for "0b")
-        println!("\tCurrent msg_processor result (bin): {} bits\n\t{result:#0width$b} ",
-                 width, result=result, width=width+2);
-        hex_cnt = (width)/4;
-        println!("\tComplete msg_processor result (hex): {} hexits\n\t{result:#0width$X} ",
-                 hex_cnt, result=result, width=(hex_cnt as usize)+2);
+        //println!("<#-{}-#>", i+1);
+        //width = (i+1)*8;
+        ////it seems having 2 more than the number of bits helps
+        ////(leaves room for "0b")
+        //println!("\tCurrent msg_processor result (bin): {} bits\n\t{result:#0width$b} ",
+        //         width, result=result, width=width+2);
+        //hex_cnt = (width)/4;
+        //println!("\tComplete msg_processor result (hex): {} hexits\n\t{result:#0width$X} ",
+        //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
     }
-    println!("<#-END-#>");
-    width = msg_format.sections.len()*8;
-    println!("Complete msg_processor result (bin): {} bits\n{result:#0width$b}",
-             width, result=result, width=width+2);
-    hex_cnt = (width)/4;
-    println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
-             hex_cnt, result=result, width=(hex_cnt as usize)+2);
-    (random_cob_id() as u64, result as u64)
+    //println!("<#-END-#>");
+    //width = msg_format.sections.len()*8;
+    //println!("Complete msg_processor result (bin): {} bits\n{result:#0width$b}",
+    //         width, result=result, width=width+2);
+    //hex_cnt = (width)/4;
+    //println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
+    //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
+    (random_cob_id(&msg_format.cob_id_range), result as u64)
 }
 
 pub fn section_proc(section: &Section) -> u64 {
     let mut sub_sec_result;
     let mut result = 0;
-    let mut bit_cnt = 0;
-    let mut hex_cnt;
+    //let mut bit_cnt = 0;
+    //let mut hex_cnt;
     for i in 0..section.sub_secs.len() {
-        bit_cnt += section.sub_secs[i].num_bits;
-        println!("##{}", i+1);
-        section.sub_secs[i].display();
-        println!();
+        //bit_cnt += section.sub_secs[i].num_bits;
+        //println!("##{}", i+1);
+        //section.sub_secs[i].display();
+        //println!();
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
         //shifting the bits to make room for the new result
         result = result << section.sub_secs[i].num_bits;
         //ORing to add the new result on the end
         result = result | sub_sec_result;
-        println!("##{}", i+1);
-        println!("\tCurrent section_proc result (bin): {} bits |{result:#0width$b} ",
-                 bit_cnt, result=result, width=(bit_cnt as usize)+2);
-        //need "+2" because if for example bit_cnt is 1, dividing it by 4 results in 0
-        //(a 1 bit value is surely still a 1 hexit value, "+2" pushes it up so it works)
-        hex_cnt = (bit_cnt+2)/4;
-        println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
-                 hex_cnt, result=result, width=(hex_cnt as usize)+2);
+        //println!("##{}", i+1);
+        //println!("\tCurrent section_proc result (bin): {} bits |{result:#0width$b} ",
+        //         bit_cnt, result=result, width=(bit_cnt as usize)+2);
+        ////need "+2" because if for example bit_cnt is 1, dividing it by 4 results in 0
+        ////(a 1 bit value is surely still a 1 hexit value, "+2" pushes it up so it works)
+        //hex_cnt = (bit_cnt+2)/4;
+        //println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
+        //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
     }
     result as u64
 }
@@ -175,16 +176,16 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     let mut rng = rand::thread_rng();
     let range = 2_u8.pow(sub_sec.num_bits as u32)-1;
     let mut result = rng.gen_range(0..range);
-    println!("sub_sec_proc range: {} ", range);
+    //println!("sub_sec_proc range: {} ", range);
     while sub_sec.holes.contains(&result) {
-        println!("Fell in a hole!\t\
-                  Random result {}, Holes {:?}",
-                  result, sub_sec.holes);
+        //println!("Fell in a hole!\t\
+        //          Random result {}, Holes {:?}",
+        //          result, sub_sec.holes);
         result = rng.gen_range(0..range);
     }
-    println!("\tsub_sec_proc result (dec): {} ", result);
-    println!("\tsub_sec_proc result (bin): {} bits |{result:#0width$b} ",
-             sub_sec.num_bits, result=result, width=(sub_sec.num_bits as usize)+2);
+    //println!("\tsub_sec_proc result (dec): {} ", result);
+    //println!("\tsub_sec_proc result (bin): {} bits |{result:#0width$b} ",
+    //         sub_sec.num_bits, result=result, width=(sub_sec.num_bits as usize)+2);
     result
 }
 
@@ -194,11 +195,11 @@ mod tests {
 
     #[test]
     fn msg_processor_test() {
-        let test_can_id_msg: (u64,u64);
+        let test_can_id_msg: (u32,u64);
         //let test_can_msg;
         let test_msg_format = MsgFormat {
             name: "TestMsgFormat#1",
-            cob_id_range: { 0..9999 },
+            cob_id_range: { 0..2_021 },
             num_sections: 2,
             sections: &[
                 Section {
@@ -249,6 +250,14 @@ mod tests {
             is_specified: false,
             specified_val: 0,
         };
+        test_msg_format.display();
+        for i in 0..test_msg_format.sections.len() {
+            println!("<#-{}-#>", i+1);
+            test_msg_format.sections[i].display();
+            test_msg_format.sections[i].display_sub_secs();
+            println!("<#-{}-#>", i+1);
+        }
+        println!("<#-END-#>");
         let mut width;
         let mut hex_cnt;
         test_can_id_msg = msg_processor(&test_msg_format);
@@ -259,12 +268,14 @@ mod tests {
                  width, result=test_can_id_msg.0, width=width+2);
         println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
                  hex_cnt, result=test_can_id_msg.0, width=(hex_cnt as usize)+2);
+        println!("--------");
         width = test_msg_format.sections.len()*8;
         hex_cnt = (width)/4;
         println!("Returned msg_processor can_msg (bin): {} bits\n{result:#0width$b}",
                  width, result=test_can_id_msg.1, width=width+2);
         println!("Returned msg_processor can_msg (hex): {} hexits\n{result:#0width$X} ",
                  hex_cnt, result=test_can_id_msg.1, width=(hex_cnt as usize)+2);
+        println!("--------");
     }
 
 }

@@ -151,7 +151,7 @@ fn main() {
     for _ in 0..repeat {
         for socket in &sockets {
             if random_id {
-                id = random_cob_id()
+                id = random_cob_id(&(0..2_021)) //passing default COB_ID range
             }
 
             if random_message {
@@ -167,7 +167,7 @@ fn main() {
         loop {
             for socket in &sockets {
                 if random_id {
-                    id = random_cob_id()
+                    id = random_cob_id(&(0..2_021)) //passing default COB_ID range
                 }
 
                 if random_message {
