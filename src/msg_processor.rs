@@ -2,7 +2,6 @@ use chrono::Utc;
 use rand::Rng;
 use socketcan::*;
 use core::ops::Range; //for COB_ID range
-use rand::distributions::uniform::SampleRange;
 
 pub struct SubSec<'a> {
     name: &'a str,
@@ -78,10 +77,10 @@ impl<'a> MsgFormat<'a> {
     }
 }
 
-pub fn random_cob_id(range: &Range<u32>) -> u32 {
+pub fn random_cob_id() -> u32 {
     let mut rng = rand::thread_rng();
-    //typical range for cob_id is 0..2_021, that was the default before
-    rng.gen_range(range as &SampleRange<u32>)
+    //typical range for cob_id is 0..2_021, that is the default
+    rng.gen_range(0..2_021)
 }
 
 pub fn random_msg() -> Vec<u8> {
@@ -142,7 +141,7 @@ pub fn msg_processor(msg_format: &MsgFormat) -> (u32,u64) {
     //hex_cnt = (width)/4;
     //println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
     //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
-    (random_cob_id(&msg_format.cob_id_range), result as u64)
+    (random_cob_id(), result as u64)
 }
 
 pub fn section_proc(section: &Section) -> u64 {
