@@ -132,46 +132,33 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     let test_msg_format = MsgFormat {
-        name: "TestMsgFormat#1",
-        cob_id_range: { 0..2_021 },
-        num_sections: 2,
+        name: "TestEMCYMsgFormat#1",
+        //0x080..0xFF, EMCY COB-ID Range
+        //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
+        cob_id_range: { 128..256 }, 
+        num_sections: 1,
         sections: &[
             Section {
-                name: "TestSec#1",
+                name: "TestEMCYSec#1",
                 num_bytes: 1,
                 sub_secs: &[
                     SubSec {
-                        name: "TestSubSec#1",
-                        num_bits: 3,
-                        holes: &[1,2],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "TestSubSec#2",
-                        num_bits: 5,
-                        holes: &[5,6],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                ],
-                is_specified: false,
-                specified_val: 0,
-            },
-            Section {
-                name: "TestSec#2",
-                num_bytes: 1,
-                sub_secs: &[
-                    SubSec {
-                        name: "TestSubSec#3",
-                        num_bits: 6,
-                        holes: &[1,2],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "TestSubSec#4",
+                        name: "EmergencyErrorCode",
                         num_bits: 2,
+                        holes: &[],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                    SubSec {
+                        name: "ErrorRegister",
+                        num_bits: 1,
+                        holes: &[],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                    SubSec {
+                        name: "ManufacturerSpecificErrorCode",
+                        num_bits: 5,
                         holes: &[],
                         is_specified: false,
                         specified_val: 0,
