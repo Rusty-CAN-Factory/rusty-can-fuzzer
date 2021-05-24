@@ -110,11 +110,13 @@ pub fn create_frame_send_msg(
 }
 
 //returns a tuple, (COB_ID,MSG)
-pub fn msg_processor(msg_format: &MsgFormat) -> (u32,u64) {
+pub fn msg_processor(msg_format: &MsgFormat) -> (u32,Vec<u8>) {
     let mut sec_result;
     let mut result = 0;
     //let mut width;
     //let mut hex_cnt;
+    let msg_byte_array;
+    let mut msg_byte_vec: Vec<u8> = Vec::new();
     for i in 0..msg_format.sections.len() {
         //println!("<#-{}-#>", i+1);
         //msg_format.sections[i].display();
@@ -141,7 +143,17 @@ pub fn msg_processor(msg_format: &MsgFormat) -> (u32,u64) {
     //hex_cnt = (width)/4;
     //println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
     //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
-    (random_cob_id(), result as u64)
+    //Chopping up result into a vec<u8>!
+    //(done at end because it's simpler to do bit shifting with a single number before now)
+    msg_byte_array = result.to_be_bytes();
+    println!("{:0X?}", msg_byte_array);
+    //for i in 0..(msg_format.sections.len()) {
+    for i in 0..8 {
+        msg_byte_vec.push(msg_byte_array[i]);
+    }
+    //msg_byte_vec = (0..8).map(|_| msg_byte_array[_]).collect();
+    //msg_byte_vec.from(msg_byte_array);
+    (random_cob_id(), msg_byte_vec)
 }
 
 pub fn section_proc(section: &Section) -> u64 {
@@ -194,8 +206,9 @@ mod tests {
 
     #[test]
     fn msg_processor_test() {
-        let test_can_id_msg: (u32,u64);
-        //let test_can_msg;
+        let test_can_id_msg: (u32,Vec<u8>);
+        //let temp_can_msg_array: [u8;8];
+        //let temp_can_msg: u64;
         let test_msg_format = MsgFormat {
             name: "TestMsgFormat#1",
             cob_id_range: { 0..2_021 },
@@ -260,7 +273,11 @@ mod tests {
         let mut width;
         let mut hex_cnt;
         test_can_id_msg = msg_processor(&test_msg_format);
-        width = 12;
+        //all of this is the OLD test display that printed the number out
+        //directly, now I need to push it out to vcan0
+        //NEVERMIND, will just use the msg_processor in main, because there isn't
+        //enough time to do this all by the books, perfect is enemy of the good, etc.
+        width = 12; //can_id typically expected to be <= 12 bits
         hex_cnt = (width)/4;
         println!("--------");
         println!("Returned msg_processor can_id (bin): {} bits\n{result:#0width$b}",
@@ -268,13 +285,13 @@ mod tests {
         println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
                  hex_cnt, result=test_can_id_msg.0, width=(hex_cnt as usize)+2);
         println!("--------");
-        width = test_msg_format.sections.len()*8;
-        hex_cnt = (width)/4;
-        println!("Returned msg_processor can_msg (bin): {} bits\n{result:#0width$b}",
-                 width, result=test_can_id_msg.1, width=width+2);
-        println!("Returned msg_processor can_msg (hex): {} hexits\n{result:#0width$X} ",
-                 hex_cnt, result=test_can_id_msg.1, width=(hex_cnt as usize)+2);
-        println!("--------");
+        //width = test_msg_format.sections.len()*8;
+        //hex_cnt = (width)/4;
+        //println!("Returned msg_processor can_msg (bin): {} bits\n{result:#0width$b}",
+        //         width, result=test_can_id_msg.1, width=width+2);
+        //println!("Returned msg_processor can_msg (hex): {} hexits\n{result:#0width$X} ",
+        //         hex_cnt, result=test_can_id_msg.1, width=(hex_cnt as usize)+2);
+        //println!("--------");
     }
 
 }
