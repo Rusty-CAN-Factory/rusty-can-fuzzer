@@ -83,10 +83,14 @@ impl<'a> MsgFormat<'a> {
     }
 }
 
-pub fn random_cob_id() -> u32 {
+pub fn random_cob_id(msg_format: &MsgFormat) -> u32 {
     let mut rng = rand::thread_rng();
+    let range_start = msg_format.cob_id_range.start;
+    let range_end = msg_format.cob_id_range.end;
     //typical range for cob_id is 0..2_021, that is the default
-    rng.gen_range(0..2_021)
+    //rng.gen_range(0..2_021)
+    //rng.gen_range(&msg_format.cob_id_range)
+    rng.gen_range(range_start..range_end)
 }
 
 pub fn random_msg() -> Vec<u8> {
@@ -121,7 +125,7 @@ pub fn msg_processor(msg_format: &MsgFormat) -> (u32,Vec<u8>) {
     let mut result = 0;
     //let mut width;
     //let mut hex_cnt;
-    let msg_byte_array;
+    let mut msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
     for i in 0..msg_format.sections.len() {
         //println!("<#-{}-#>", i+1);
@@ -152,14 +156,17 @@ pub fn msg_processor(msg_format: &MsgFormat) -> (u32,Vec<u8>) {
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
     msg_byte_array = result.to_be_bytes();
-    println!("{:0X?}", msg_byte_array);
+    println!("Big Endian:\t{:0X?}", msg_byte_array);
+    msg_byte_array = result.to_le_bytes();
+    println!("Little Endian:\t{:0X?}", msg_byte_array);
+    //based on my testing, it seems LITTLE ENDIAN IS IT
     //for i in 0..(msg_format.sections.len()) {
-    for i in 0..8 {
+    for i in 0..msg_format.sections.len() {
         msg_byte_vec.push(msg_byte_array[i]);
     }
     //msg_byte_vec = (0..8).map(|_| msg_byte_array[_]).collect();
     //msg_byte_vec.from(msg_byte_array);
-    (random_cob_id(), msg_byte_vec)
+    (random_cob_id(&msg_format), msg_byte_vec)
 }
 
 pub fn section_proc(section: &Section) -> u64 {
