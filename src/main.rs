@@ -142,27 +142,27 @@ fn main() {
                 name: "TestEMCYSec#1",
                 num_bytes: 1,
                 sub_secs: &[
-                    SubSec {
-                        name: "EmergencyErrorCode",
-                        num_bits: 2,
-                        holes: &[],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "ErrorRegister",
-                        num_bits: 1,
-                        holes: &[],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
-                    SubSec {
-                        name: "ManufacturerSpecificErrorCode",
-                        num_bits: 5,
-                        holes: &[],
-                        is_specified: false,
-                        specified_val: 0,
-                    },
+                    SubSec::new(
+                        "EmergencyErrorCode",
+                        2,
+                        &[],
+                        false,
+                        0
+                    ),
+                    SubSec::new(
+                        "ErrorRegister",
+                        1,
+                        &[],
+                        false,
+                        0,
+                    ),
+                    SubSec::new(
+                        "ManufacturerSpecificErrorCode",
+                        5,
+                        &[],
+                        false,
+                        0,
+                    ),
                 ],
                 is_specified: false,
                 specified_val: 0,

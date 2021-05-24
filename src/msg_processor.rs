@@ -4,17 +4,30 @@ use socketcan::*;
 use core::ops::Range; //for COB_ID range
 
 pub struct SubSec<'a> {
-    //making these fields all public because I haven't
-    //made a constructor for this struct yet
-    pub name: &'a str,
-    pub num_bits: u8,
-    //holes: &[u8],
-    pub holes: &'a [u8],
-    pub is_specified: bool,
-    pub specified_val: u8,
+    name: &'a str,
+    num_bits: u8,
+    holes: &'a [u8],
+    is_specified: bool,
+    specified_val: u8,
 }
 
 impl<'a> SubSec<'a> {
+    pub fn new(
+            name: &'a str,
+            num_bits: u8,
+            holes: &'a [u8],
+            is_specified: bool,
+            specified_val: u8
+        ) -> Self {
+            Self {
+                name,
+                num_bits,
+                holes,
+                is_specified,
+                specified_val
+            }
+    }
+            
     pub fn display(self: &Self) {
         println!("\t\t{}: \n\
                   \t\tnum_bits {}, holes {:?}, \n\
@@ -36,6 +49,22 @@ pub struct Section<'a> {
 }
 
 impl<'a> Section<'a> {
+    pub fn new(
+            name: &'a str,
+            num_bytes: u8,
+            sub_secs: &'a [SubSec<'a>],
+            is_specified: bool,
+            specified_val: u64
+        ) -> Self {
+            Self {
+                name,
+                num_bytes,
+                sub_secs,
+                is_specified,
+                specified_val
+            }
+    }
+            
     pub fn display(self: &Self) {
         println!("\t{}: \n\
                   \tnum_bytes {}, is_specified {}, specified_val {}",
@@ -120,77 +149,37 @@ pub fn create_frame_send_msg(
 pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut sec_result;
     let mut result = 0;
-    //let mut width;
-    //let mut hex_cnt;
-    let mut msg_byte_array;
+    let msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
     for i in 0..msg_format.sections.len() {
-        //println!("<#-{}-#>", i+1);
-        //msg_format.sections[i].display();
-        //println!();
         sec_result = section_proc(&msg_format.sections[i]);
         //shifting the bits to make room for the new result
         result = result << msg_format.sections[i].num_bytes*8;
         //ORing to add the new result on the end
         result = result | sec_result;
-        //println!("<#-{}-#>", i+1);
-        //width = (i+1)*8;
-        ////it seems having 2 more than the number of bits helps
-        ////(leaves room for "0b")
-        //println!("\tCurrent msg_processor result (bin): {} bits\n\t{result:#0width$b} ",
-        //         width, result=result, width=width+2);
-        //hex_cnt = (width)/4;
-        //println!("\tComplete msg_processor result (hex): {} hexits\n\t{result:#0width$X} ",
-        //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
     }
-    //println!("<#-END-#>");
-    //width = msg_format.sections.len()*8;
-    //println!("Complete msg_processor result (bin): {} bits\n{result:#0width$b}",
-    //         width, result=result, width=width+2);
-    //hex_cnt = (width)/4;
-    //println!("Complete msg_processor result (hex): {} hexits\n{result:#0width$X} ",
-    //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
-    msg_byte_array = result.to_be_bytes();
-    println!("Big Endian:\t{:0X?}", msg_byte_array);
     msg_byte_array = result.to_le_bytes();
     println!("Little Endian:\t{:0X?}", msg_byte_array);
     //based on my testing with EMCY, it seems LITTLE ENDIAN IS IT
     //then again, that is a single 8-bit chunk wide, so issues
     //may crop up later with longer formats
-    //for i in 0..(msg_format.sections.len()) {
     for i in 0..msg_format.sections.len() {
         msg_byte_vec.push(msg_byte_array[i]);
     }
-    //msg_byte_vec = (0..8).map(|_| msg_byte_array[_]).collect();
-    //msg_byte_vec.from(msg_byte_array);
     msg_byte_vec
 }
 
 pub fn section_proc(section: &Section) -> u64 {
     let mut sub_sec_result;
     let mut result = 0;
-    //let mut bit_cnt = 0;
-    //let mut hex_cnt;
     for i in 0..section.sub_secs.len() {
-        //bit_cnt += section.sub_secs[i].num_bits;
-        //println!("##{}", i+1);
-        //section.sub_secs[i].display();
-        //println!();
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
         //shifting the bits to make room for the new result
         result = result << section.sub_secs[i].num_bits;
         //ORing to add the new result on the end
         result = result | sub_sec_result;
-        //println!("##{}", i+1);
-        //println!("\tCurrent section_proc result (bin): {} bits |{result:#0width$b} ",
-        //         bit_cnt, result=result, width=(bit_cnt as usize)+2);
-        ////need "+2" because if for example bit_cnt is 1, dividing it by 4 results in 0
-        ////(a 1 bit value is surely still a 1 hexit value, "+2" pushes it up so it works)
-        //hex_cnt = (bit_cnt+2)/4;
-        //println!("\tCurrent section_proc result (hex): {} hexits |{result:#0width$X} ",
-        //         hex_cnt, result=result, width=(hex_cnt as usize)+2);
     }
     result as u64
 }
@@ -199,16 +188,9 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     let mut rng = rand::thread_rng();
     let range = 2_u8.pow(sub_sec.num_bits as u32)-1;
     let mut result = rng.gen_range(0..range);
-    //println!("sub_sec_proc range: {} ", range);
     while sub_sec.holes.contains(&result) {
-        //println!("Fell in a hole!\t\
-        //          Random result {}, Holes {:?}",
-        //          result, sub_sec.holes);
         result = rng.gen_range(0..range);
     }
-    //println!("\tsub_sec_proc result (dec): {} ", result);
-    //println!("\tsub_sec_proc result (bin): {} bits |{result:#0width$b} ",
-    //         sub_sec.num_bits, result=result, width=(sub_sec.num_bits as usize)+2);
     result
 }
 
@@ -218,6 +200,9 @@ mod tests {
 
     #[test]
     fn msg_processor_test() {
+        //just testing SubSec.new()
+        //let test_sub_sec = SubSec::new("TestSubSec#1", 3, &[1,2], false, 0);
+        //test_sub_sec.display();
         let test_can_id: u32;
         let test_can_msg: Vec<u8>;
         let test_msg_format = MsgFormat {
@@ -229,20 +214,20 @@ mod tests {
                     name: "TestSec#1",
                     num_bytes: 1,
                     sub_secs: &[
-                        SubSec {
-                            name: "TestSubSec#1",
-                            num_bits: 3,
-                            holes: &[1,2],
-                            is_specified: false,
-                            specified_val: 0,
-                        },
-                        SubSec {
-                            name: "TestSubSec#2",
-                            num_bits: 5,
-                            holes: &[5,6],
-                            is_specified: false,
-                            specified_val: 0,
-                        },
+                        SubSec::new(
+                            "TestSubSec#1",
+                            3,
+                            &[1,2],
+                            false,
+                            0
+                        ),
+                        SubSec::new(
+                            "TestSubSec#2",
+                            5,
+                            &[5,6],
+                            false,
+                            0
+                        ),
                     ],
                     is_specified: false,
                     specified_val: 0,
@@ -251,20 +236,20 @@ mod tests {
                     name: "TestSec#2",
                     num_bytes: 1,
                     sub_secs: &[
-                        SubSec {
-                            name: "TestSubSec#3",
-                            num_bits: 6,
-                            holes: &[1,2],
-                            is_specified: false,
-                            specified_val: 0,
-                        },
-                        SubSec {
-                            name: "TestSubSec#4",
-                            num_bits: 2,
-                            holes: &[],
-                            is_specified: false,
-                            specified_val: 0,
-                        },
+                        SubSec::new(
+                            "TestSubSec#3",
+                            6,
+                            &[1,2],
+                            false,
+                            0
+                        ),
+                        SubSec::new(
+                            "TestSubSec#4",
+                            2,
+                            &[],
+                            false,
+                            0
+                        ),
                     ],
                     is_specified: false,
                     specified_val: 0,
@@ -285,10 +270,6 @@ mod tests {
         let mut hex_cnt;
         test_can_id = random_cob_id(&test_msg_format);
         test_can_msg = msg_processor(&test_msg_format);
-        //all of this is the OLD test display that printed the number out
-        //directly, now I need to push it out to vcan0
-        //NEVERMIND, will just use the msg_processor in main, because there isn't
-        //enough time to do this all by the books, perfect is enemy of the good, etc.
         width = 12; //can_id typically expected to be <= 12 bits
         hex_cnt = (width)/4;
         println!("--------");
@@ -297,13 +278,8 @@ mod tests {
         println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
                  hex_cnt, result=test_can_id, width=(hex_cnt as usize)+2);
         println!("--------");
-        //width = test_msg_format.sections.len()*8;
-        //hex_cnt = (width)/4;
-        //println!("Returned msg_processor can_msg (bin): {} bits\n{result:#0width$b}",
-        //         width, result=test_can_id_msg.1, width=width+2);
-        //println!("Returned msg_processor can_msg (hex): {} hexits\n{result:#0width$X} ",
-        //         hex_cnt, result=test_can_id_msg.1, width=(hex_cnt as usize)+2);
-        //println!("--------");
+        //no longer prints out the test_can_msg, because that'd require re-converting
+        //it from a Vector into a string of bits, will do if there's time
     }
 
 }
