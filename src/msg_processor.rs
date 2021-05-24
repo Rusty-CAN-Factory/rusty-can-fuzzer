@@ -4,12 +4,14 @@ use socketcan::*;
 use core::ops::Range; //for COB_ID range
 
 pub struct SubSec<'a> {
-    name: &'a str,
-    num_bits: u8,
+    //making these fields all public because I haven't
+    //made a constructor for this struct yet
+    pub name: &'a str,
+    pub num_bits: u8,
     //holes: &[u8],
-    holes: &'a [u8],
-    is_specified: bool,
-    specified_val: u8,
+    pub holes: &'a [u8],
+    pub is_specified: bool,
+    pub specified_val: u8,
 }
 
 impl<'a> SubSec<'a> {
@@ -24,11 +26,13 @@ impl<'a> SubSec<'a> {
 }
 
 pub struct Section<'a> {
-    name: &'a str,
-    num_bytes: u8,
-    sub_secs: &'a [SubSec<'a>],
-    is_specified: bool,
-    specified_val: u64,
+    //making these fields all public because I haven't
+    //made a constructor for this struct yet
+    pub name: &'a str,
+    pub num_bytes: u8,
+    pub sub_secs: &'a [SubSec<'a>],
+    pub is_specified: bool,
+    pub specified_val: u64,
 }
 
 impl<'a> Section<'a> {
@@ -51,12 +55,14 @@ impl<'a> Section<'a> {
 }
 
 pub struct MsgFormat<'a> {
-    name: &'a str,
-    cob_id_range: Range<u32>,
-    num_sections: u8,
-    sections: &'a [Section<'a>],
-    is_specified: bool,
-    specified_val: u8,
+    //making these fields all public because I haven't
+    //made a constructor for this struct yet
+    pub name: &'a str,
+    pub cob_id_range: Range<u32>,
+    pub num_sections: u8,
+    pub sections: &'a [Section<'a>],
+    pub is_specified: bool,
+    pub specified_val: u8,
 }
 
 impl<'a> MsgFormat<'a> {

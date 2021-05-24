@@ -131,7 +131,59 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    //Setup bus and socket objects
+    let test_msg_format = MsgFormat {
+        name: "TestMsgFormat#1",
+        cob_id_range: { 0..2_021 },
+        num_sections: 2,
+        sections: &[
+            Section {
+                name: "TestSec#1",
+                num_bytes: 1,
+                sub_secs: &[
+                    SubSec {
+                        name: "TestSubSec#1",
+                        num_bits: 3,
+                        holes: &[1,2],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                    SubSec {
+                        name: "TestSubSec#2",
+                        num_bits: 5,
+                        holes: &[5,6],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                ],
+                is_specified: false,
+                specified_val: 0,
+            },
+            Section {
+                name: "TestSec#2",
+                num_bytes: 1,
+                sub_secs: &[
+                    SubSec {
+                        name: "TestSubSec#3",
+                        num_bits: 6,
+                        holes: &[1,2],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                    SubSec {
+                        name: "TestSubSec#4",
+                        num_bits: 2,
+                        holes: &[],
+                        is_specified: false,
+                        specified_val: 0,
+                    },
+                ],
+                is_specified: false,
+                specified_val: 0,
+            },
+        ],
+        is_specified: false,
+        specified_val: 0,
+    };
     let mut sockets = Vec::new();
     for channel in &channels {
         create_bus(channel);
@@ -155,7 +207,8 @@ fn main() {
             }
 
             if random_message {
-                message_parsed = random_msg()
+                //message_parsed = random_msg()
+                message_parsed = msg_processor(&test_msg_format).1;
             }
             create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
         }
@@ -171,7 +224,8 @@ fn main() {
                 }
 
                 if random_message {
-                    message_parsed = random_msg()
+                    //message_parsed = random_msg()
+                    message_parsed = msg_processor(&test_msg_format).1;
                 }
                 create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
             }
