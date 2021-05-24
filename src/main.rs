@@ -195,7 +195,7 @@ fn main() {
 
             if random_message {
                 //message_parsed = random_msg()
-                message_parsed = msg_processor(&test_msg_format).1;
+                message_parsed = msg_processor(&test_msg_format);
             }
             create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
         }
@@ -212,7 +212,7 @@ fn main() {
 
                 if random_message {
                     //message_parsed = random_msg()
-                    message_parsed = msg_processor(&test_msg_format).1;
+                    message_parsed = msg_processor(&test_msg_format);
                 }
                 create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
             }

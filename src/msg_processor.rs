@@ -85,12 +85,9 @@ impl<'a> MsgFormat<'a> {
 
 pub fn random_cob_id(msg_format: &MsgFormat) -> u32 {
     let mut rng = rand::thread_rng();
-    let range_start = msg_format.cob_id_range.start;
-    let range_end = msg_format.cob_id_range.end;
-    //typical range for cob_id is 0..2_021, that is the default
-    //rng.gen_range(0..2_021)
-    //rng.gen_range(&msg_format.cob_id_range)
-    rng.gen_range(range_start..range_end)
+    //total range for cob_id in CANOpen is 0..2_021 (aka 0x0..0x7E5)
+    //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
+    rng.gen_range(msg_format.cob_id_range.start..msg_format.cob_id_range.end)
 }
 
 pub fn random_msg() -> Vec<u8> {
@@ -119,8 +116,8 @@ pub fn create_frame_send_msg(
     );
 }
 
-//returns a tuple, (COB_ID,MSG)
-pub fn msg_processor(msg_format: &MsgFormat) -> (u32,Vec<u8>) {
+//returns a Vector of u8 chunks containing the message
+pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut sec_result;
     let mut result = 0;
     //let mut width;
@@ -159,14 +156,16 @@ pub fn msg_processor(msg_format: &MsgFormat) -> (u32,Vec<u8>) {
     println!("Big Endian:\t{:0X?}", msg_byte_array);
     msg_byte_array = result.to_le_bytes();
     println!("Little Endian:\t{:0X?}", msg_byte_array);
-    //based on my testing, it seems LITTLE ENDIAN IS IT
+    //based on my testing with EMCY, it seems LITTLE ENDIAN IS IT
+    //then again, that is a single 8-bit chunk wide, so issues
+    //may crop up later with longer formats
     //for i in 0..(msg_format.sections.len()) {
     for i in 0..msg_format.sections.len() {
         msg_byte_vec.push(msg_byte_array[i]);
     }
     //msg_byte_vec = (0..8).map(|_| msg_byte_array[_]).collect();
     //msg_byte_vec.from(msg_byte_array);
-    (random_cob_id(&msg_format), msg_byte_vec)
+    msg_byte_vec
 }
 
 pub fn section_proc(section: &Section) -> u64 {
@@ -219,9 +218,8 @@ mod tests {
 
     #[test]
     fn msg_processor_test() {
-        let test_can_id_msg: (u32,Vec<u8>);
-        //let temp_can_msg_array: [u8;8];
-        //let temp_can_msg: u64;
+        let test_can_id: u32;
+        let test_can_msg: Vec<u8>;
         let test_msg_format = MsgFormat {
             name: "TestMsgFormat#1",
             cob_id_range: { 0..2_021 },
@@ -285,7 +283,8 @@ mod tests {
         println!("<#-END-#>");
         let mut width;
         let mut hex_cnt;
-        test_can_id_msg = msg_processor(&test_msg_format);
+        test_can_id = random_cob_id(&test_msg_format);
+        test_can_msg = msg_processor(&test_msg_format);
         //all of this is the OLD test display that printed the number out
         //directly, now I need to push it out to vcan0
         //NEVERMIND, will just use the msg_processor in main, because there isn't
@@ -294,9 +293,9 @@ mod tests {
         hex_cnt = (width)/4;
         println!("--------");
         println!("Returned msg_processor can_id (bin): {} bits\n{result:#0width$b}",
-                 width, result=test_can_id_msg.0, width=width+2);
+                 width, result=test_can_id, width=width+2);
         println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
-                 hex_cnt, result=test_can_id_msg.0, width=(hex_cnt as usize)+2);
+                 hex_cnt, result=test_can_id, width=(hex_cnt as usize)+2);
         println!("--------");
         //width = test_msg_format.sections.len()*8;
         //hex_cnt = (width)/4;
