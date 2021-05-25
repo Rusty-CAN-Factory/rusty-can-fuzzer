@@ -131,46 +131,48 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let test_msg_format = MsgFormat {
-        name: "TestEMCYMsgFormat#1",
+    //EMCY based test format
+    let test_msg_format = MsgFormat::new(
+        String::from("TestEMCYMsgFormat#1"),
         //0x080..0xFF, EMCY COB-ID Range
         //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
-        cob_id_range: { 128..256 }, 
-        num_sections: 1,
-        sections: &[
-            Section {
-                name: "TestEMCYSec#1",
-                num_bytes: 1,
-                sub_secs: &[
+        std::ops::Range{ start: 128, end: 256 }, 
+        1,
+        vec![
+            Section::new(
+                String::from("TestEMCYSec#1"),
+                1,
+                vec![
                     SubSec::new(
-                        "EmergencyErrorCode",
+                        String::from("EmergencyErrorCode"),
                         2,
-                        &[],
+                        vec![],
                         false,
                         0
                     ),
                     SubSec::new(
-                        "ErrorRegister",
+                        String::from("ErrorRegister"),
                         1,
-                        &[],
+                        vec![],
                         false,
                         0,
                     ),
                     SubSec::new(
-                        "ManufacturerSpecificErrorCode",
+                        String::from("ManufacturerSpecificErrorCode"),
                         5,
-                        &[],
+                        vec![],
                         false,
                         0,
                     ),
                 ],
-                is_specified: false,
-                specified_val: 0,
-            },
+                false,
+                0,
+            ),
         ],
-        is_specified: false,
-        specified_val: 0,
-    };
+        false,
+        0,
+    );
+    //Setup bus and socket objects
     let mut sockets = Vec::new();
     for channel in &channels {
         create_bus(channel);

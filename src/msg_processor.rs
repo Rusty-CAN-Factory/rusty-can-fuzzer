@@ -3,19 +3,19 @@ use rand::Rng;
 use socketcan::*;
 use core::ops::Range; //for COB_ID range
 
-pub struct SubSec<'a> {
-    name: &'a str,
+pub struct SubSec {
+    name: String,
     num_bits: u8,
-    holes: &'a [u8],
+    holes: Vec<u8>,
     is_specified: bool,
     specified_val: u8,
 }
 
-impl<'a> SubSec<'a> {
+impl SubSec {
     pub fn new(
-            name: &'a str,
+            name: String,
             num_bits: u8,
-            holes: &'a [u8],
+            holes: Vec<u8>,
             is_specified: bool,
             specified_val: u8
         ) -> Self {
@@ -38,21 +38,19 @@ impl<'a> SubSec<'a> {
     }
 }
 
-pub struct Section<'a> {
-    //making these fields all public because I haven't
-    //made a constructor for this struct yet
-    pub name: &'a str,
-    pub num_bytes: u8,
-    pub sub_secs: &'a [SubSec<'a>],
-    pub is_specified: bool,
-    pub specified_val: u64,
+pub struct Section {
+    name: String,
+    num_bytes: u8,
+    sub_secs: Vec<SubSec>,
+    is_specified: bool,
+    specified_val: u64,
 }
 
-impl<'a> Section<'a> {
+impl Section {
     pub fn new(
-            name: &'a str,
+            name: String,
             num_bytes: u8,
-            sub_secs: &'a [SubSec<'a>],
+            sub_secs: Vec<SubSec>,
             is_specified: bool,
             specified_val: u64
         ) -> Self {
@@ -83,18 +81,33 @@ impl<'a> Section<'a> {
     }
 }
 
-pub struct MsgFormat<'a> {
-    //making these fields all public because I haven't
-    //made a constructor for this struct yet
-    pub name: &'a str,
-    pub cob_id_range: Range<u32>,
-    pub num_sections: u8,
-    pub sections: &'a [Section<'a>],
-    pub is_specified: bool,
-    pub specified_val: u8,
+pub struct MsgFormat {
+    name: String,
+    cob_id_range: Range<u32>,
+    num_sections: u8,
+    sections: Vec<Section>,
+    is_specified: bool,
+    specified_val: u64,
 }
 
-impl<'a> MsgFormat<'a> {
+impl MsgFormat {
+    pub fn new(
+            name: String,
+            cob_id_range: Range<u32>,
+            num_sections: u8,
+            sections: Vec<Section>,
+            is_specified: bool,
+            specified_val: u64
+        ) -> Self {
+            Self {
+                name,
+                cob_id_range,
+                num_sections,
+                sections,
+                is_specified,
+                specified_val
+            }
+    }
     pub fn display(self: &Self) {
         println!("{}: \n\
                   cob_id_range: {:?}, num_sections {}, \n\
@@ -214,59 +227,59 @@ mod tests {
         //test_sub_sec.display();
         let test_can_id: u32;
         let test_can_msg: Vec<u8>;
-        let test_msg_format = MsgFormat {
-            name: "TestMsgFormat#1",
-            cob_id_range: { 0..2_021 },
-            num_sections: 2,
-            sections: &[
-                Section {
-                    name: "TestSec#1",
-                    num_bytes: 1,
-                    sub_secs: &[
+        let test_msg_format = MsgFormat::new(
+            String::from("TestMsgFormat#1"),
+            Range{ start: 0, end: 2_021 },
+            2,
+            vec![
+                Section::new(
+                    String::from("TestSec#1"),
+                    1,
+                    vec![
                         SubSec::new(
-                            "TestSubSec#1",
+                            String::from("TestSubSec#1"),
                             3,
-                            &[1,2],
+                            vec![1,2],
                             false,
                             0
                         ),
                         SubSec::new(
-                            "TestSubSec#2",
+                            String::from("TestSubSec#2"),
                             5,
-                            &[5,6],
+                            vec![5,6],
                             false,
                             0
                         ),
                     ],
-                    is_specified: false,
-                    specified_val: 0,
-                },
-                Section {
-                    name: "TestSec#2",
-                    num_bytes: 1,
-                    sub_secs: &[
+                    false,
+                    0,
+                ),
+                Section::new(
+                    String::from("TestSec#2"),
+                    1,
+                    vec![
                         SubSec::new(
-                            "TestSubSec#3",
+                            String::from("TestSubSec#3"),
                             6,
-                            &[1,2],
+                            vec![1,2],
                             false,
                             0
                         ),
                         SubSec::new(
-                            "TestSubSec#4",
+                            String::from("TestSubSec#4"),
                             2,
-                            &[],
+                            vec![],
                             false,
                             0
                         ),
                     ],
-                    is_specified: false,
-                    specified_val: 0,
-                },
+                    false,
+                    0,
+                ),
             ],
-            is_specified: false,
-            specified_val: 0,
-        };
+            false,
+            0,
+        );
         test_msg_format.display();
         for i in 0..test_msg_format.sections.len() {
             println!("<#-{}-#>", i+1);
