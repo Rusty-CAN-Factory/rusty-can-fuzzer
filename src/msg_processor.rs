@@ -149,19 +149,28 @@ pub fn create_frame_send_msg(
 pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut sec_result;
     let mut result = 0;
-    let msg_byte_array;
+    let mut msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
     for i in 0..msg_format.sections.len() {
         sec_result = section_proc(&msg_format.sections[i]);
+        println!("SecResult: (bin) \t{:0b}", sec_result);
+        println!("SecResult: (hex) \t{:0X?}", sec_result);
         //shifting the bits to make room for the new result
         result = result << msg_format.sections[i].num_bytes*8;
         //ORing to add the new result on the end
         result = result | sec_result;
     }
+    //bit shifting the final result so we push the actual
+    //code all the way to the left as needed for CAN
+    result = result << 64-msg_format.sections.len()*8;
+    println!("Result: (bin) \t{:0b}", result);
+    println!("Result: (hex) \t{:0X?}", result);
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
-    msg_byte_array = result.to_le_bytes();
-    println!("Little Endian:\t{:0X?}", msg_byte_array);
+    //msg_byte_array = result.to_le_bytes();
+    //println!("Little Endian:\t{:0X?}", msg_byte_array);
+    msg_byte_array = result.to_be_bytes();
+    println!("Big Endian:\t{:0X?}", msg_byte_array);
     //based on my testing with EMCY, it seems LITTLE ENDIAN IS IT
     //then again, that is a single 8-bit chunk wide, so issues
     //may crop up later with longer formats
