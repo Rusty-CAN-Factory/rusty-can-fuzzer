@@ -136,39 +136,28 @@ fn main() {
         String::from("TestEMCYMsgFormat#1"),
         //0x080..0xFF, EMCY COB-ID Range
         //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
-        std::ops::Range{ start: 128, end: 256 }, 
+        std::ops::Range {
+            start: 128,
+            end: 256,
+        },
         1,
-        vec![
-            Section::new(
-                String::from("TestEMCYSec#1"),
-                1,
-                vec![
-                    SubSec::new(
-                        String::from("EmergencyErrorCode"),
-                        2,
-                        vec![],
-                        false,
-                        0
-                    ),
-                    SubSec::new(
-                        String::from("ErrorRegister"),
-                        1,
-                        vec![],
-                        false,
-                        0,
-                    ),
-                    SubSec::new(
-                        String::from("ManufacturerSpecificErrorCode"),
-                        5,
-                        vec![],
-                        false,
-                        0,
-                    ),
-                ],
-                false,
-                0,
-            ),
-        ],
+        vec![Section::new(
+            String::from("TestEMCYSec#1"),
+            1,
+            vec![
+                SubSec::new(String::from("EmergencyErrorCode"), 2, vec![], false, 0),
+                SubSec::new(String::from("ErrorRegister"), 1, vec![], false, 0),
+                SubSec::new(
+                    String::from("ManufacturerSpecificErrorCode"),
+                    5,
+                    vec![],
+                    false,
+                    0,
+                ),
+            ],
+            false,
+            0,
+        )],
         false,
         0,
     );

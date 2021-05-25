@@ -1,8 +1,9 @@
 use chrono::Utc;
+use core::ops::Range;
 use rand::Rng;
-use socketcan::*;
-use core::ops::Range; //for COB_ID range
+use socketcan::*; //for COB_ID range
 
+#[derive(Debug)]
 pub struct SubSec {
     name: String,
     num_bits: u8,
@@ -13,31 +14,32 @@ pub struct SubSec {
 
 impl SubSec {
     pub fn new(
-            name: String,
-            num_bits: u8,
-            holes: Vec<u8>,
-            is_specified: bool,
-            specified_val: u8
-        ) -> Self {
-            Self {
-                name,
-                num_bits,
-                holes,
-                is_specified,
-                specified_val
-            }
+        name: String,
+        num_bits: u8,
+        holes: Vec<u8>,
+        is_specified: bool,
+        specified_val: u8,
+    ) -> Self {
+        Self {
+            name,
+            num_bits,
+            holes,
+            is_specified,
+            specified_val,
+        }
     }
-            
+
     pub fn display(self: &Self) {
-        println!("\t\t{}: \n\
+        println!(
+            "\t\t{}: \n\
                   \t\tnum_bits {}, holes {:?}, \n\
                   \t\tis_specified {}, specified_val {}",
-                  self.name,
-                  self.num_bits, self.holes, self.is_specified,
-                  self.specified_val);
+            self.name, self.num_bits, self.holes, self.is_specified, self.specified_val
+        );
     }
 }
 
+#[derive(Debug)]
 pub struct Section {
     name: String,
     num_bytes: u8,
@@ -48,32 +50,30 @@ pub struct Section {
 
 impl Section {
     pub fn new(
-            name: String,
-            num_bytes: u8,
-            sub_secs: Vec<SubSec>,
-            is_specified: bool,
-            specified_val: u64
-        ) -> Self {
-            Self {
-                name,
-                num_bytes,
-                sub_secs,
-                is_specified,
-                specified_val
-            }
+        name: String,
+        num_bytes: u8,
+        sub_secs: Vec<SubSec>,
+        is_specified: bool,
+        specified_val: u64,
+    ) -> Self {
+        Self {
+            name,
+            num_bytes,
+            sub_secs,
+            is_specified,
+            specified_val,
+        }
     }
-            
+
     pub fn display(self: &Self) {
-        println!("\t{}: \n\
+        println!(
+            "\t{}: \n\
                   \tnum_bytes {}, is_specified {}, specified_val {}",
-                  self.name,
-                  self.num_bytes, self.is_specified,
-                  self.specified_val);
+            self.name, self.num_bytes, self.is_specified, self.specified_val
+        );
     }
 
     pub fn display_sub_secs(self: &Self) {
-        //let mut i = 0;
-        //for i in self.sub_secs.len() {
         for i in 0..self.sub_secs.len() {
             println!("\t\tSubSec #{}: ", i);
             self.sub_secs[i].display();
@@ -81,6 +81,7 @@ impl Section {
     }
 }
 
+#[derive(Debug)]
 pub struct MsgFormat {
     name: String,
     cob_id_range: Range<u32>,
@@ -92,29 +93,29 @@ pub struct MsgFormat {
 
 impl MsgFormat {
     pub fn new(
-            name: String,
-            cob_id_range: Range<u32>,
-            num_sections: u8,
-            sections: Vec<Section>,
-            is_specified: bool,
-            specified_val: u64
-        ) -> Self {
-            Self {
-                name,
-                cob_id_range,
-                num_sections,
-                sections,
-                is_specified,
-                specified_val
-            }
+        name: String,
+        cob_id_range: Range<u32>,
+        num_sections: u8,
+        sections: Vec<Section>,
+        is_specified: bool,
+        specified_val: u64,
+    ) -> Self {
+        Self {
+            name,
+            cob_id_range,
+            num_sections,
+            sections,
+            is_specified,
+            specified_val,
+        }
     }
     pub fn display(self: &Self) {
-        println!("{}: \n\
+        println!(
+            "{}: \n\
                   cob_id_range: {:?}, num_sections {}, \n\
                   is_specified {}, specified_val {}",
-                  self.name,
-                  self.cob_id_range, self.num_sections,
-                  self.is_specified, self.specified_val);
+            self.name, self.cob_id_range, self.num_sections, self.is_specified, self.specified_val
+        );
     }
 
     pub fn display_sections(self: &Self) {
@@ -162,31 +163,21 @@ pub fn create_frame_send_msg(
 pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut sec_result;
     let mut result = 0;
-    let mut msg_byte_array;
+    let msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
     for i in 0..msg_format.sections.len() {
         sec_result = section_proc(&msg_format.sections[i]);
-        println!("SecResult: (bin) \t{:0b}", sec_result);
-        println!("SecResult: (hex) \t{:0X?}", sec_result);
         //shifting the bits to make room for the new result
-        result = result << msg_format.sections[i].num_bytes*8;
+        result = result << msg_format.sections[i].num_bytes * 8;
         //ORing to add the new result on the end
         result = result | sec_result;
     }
     //bit shifting the final result so we push the actual
     //code all the way to the left as needed for CAN
-    result = result << 64-msg_format.sections.len()*8;
-    println!("Result: (bin) \t{:0b}", result);
-    println!("Result: (hex) \t{:0X?}", result);
+    result = result << 64 - msg_format.sections.len() * 8;
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
-    //msg_byte_array = result.to_le_bytes();
-    //println!("Little Endian:\t{:0X?}", msg_byte_array);
     msg_byte_array = result.to_be_bytes();
-    println!("Big Endian:\t{:0X?}", msg_byte_array);
-    //based on my testing with EMCY, it seems LITTLE ENDIAN IS IT
-    //then again, that is a single 8-bit chunk wide, so issues
-    //may crop up later with longer formats
     for i in 0..msg_format.sections.len() {
         msg_byte_vec.push(msg_byte_array[i]);
     }
@@ -208,7 +199,7 @@ pub fn section_proc(section: &Section) -> u64 {
 
 pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     let mut rng = rand::thread_rng();
-    let range = 2_u8.pow(sub_sec.num_bits as u32)-1;
+    let range = 2_u8.pow(sub_sec.num_bits as u32) - 1;
     let mut result = rng.gen_range(0..range);
     while sub_sec.holes.contains(&result) {
         result = rng.gen_range(0..range);
@@ -222,34 +213,22 @@ mod tests {
 
     #[test]
     fn msg_processor_test() {
-        //just testing SubSec.new()
-        //let test_sub_sec = SubSec::new("TestSubSec#1", 3, &[1,2], false, 0);
-        //test_sub_sec.display();
         let test_can_id: u32;
         let test_can_msg: Vec<u8>;
         let test_msg_format = MsgFormat::new(
             String::from("TestMsgFormat#1"),
-            Range{ start: 0, end: 2_021 },
+            Range {
+                start: 0,
+                end: 2_021,
+            },
             2,
             vec![
                 Section::new(
                     String::from("TestSec#1"),
                     1,
                     vec![
-                        SubSec::new(
-                            String::from("TestSubSec#1"),
-                            3,
-                            vec![1,2],
-                            false,
-                            0
-                        ),
-                        SubSec::new(
-                            String::from("TestSubSec#2"),
-                            5,
-                            vec![5,6],
-                            false,
-                            0
-                        ),
+                        SubSec::new(String::from("TestSubSec#1"), 3, vec![1, 2], false, 0),
+                        SubSec::new(String::from("TestSubSec#2"), 5, vec![5, 6], false, 0),
                     ],
                     false,
                     0,
@@ -258,20 +237,8 @@ mod tests {
                     String::from("TestSec#2"),
                     1,
                     vec![
-                        SubSec::new(
-                            String::from("TestSubSec#3"),
-                            6,
-                            vec![1,2],
-                            false,
-                            0
-                        ),
-                        SubSec::new(
-                            String::from("TestSubSec#4"),
-                            2,
-                            vec![],
-                            false,
-                            0
-                        ),
+                        SubSec::new(String::from("TestSubSec#3"), 6, vec![1, 2], false, 0),
+                        SubSec::new(String::from("TestSubSec#4"), 2, vec![], false, 0),
                     ],
                     false,
                     0,
@@ -281,11 +248,13 @@ mod tests {
             0,
         );
         test_msg_format.display();
+        //println!("{}", test_msg_format);
+        //println!("{:#?}", test_msg_format);
         for i in 0..test_msg_format.sections.len() {
-            println!("<#-{}-#>", i+1);
+            println!("<#-{}-#>", i + 1);
             test_msg_format.sections[i].display();
             test_msg_format.sections[i].display_sub_secs();
-            println!("<#-{}-#>", i+1);
+            println!("<#-{}-#>", i + 1);
         }
         println!("<#-END-#>");
         let mut width;
@@ -293,27 +262,22 @@ mod tests {
         test_can_id = random_cob_id(&test_msg_format);
         test_can_msg = msg_processor(&test_msg_format);
         width = 12; //can_id typically expected to be <= 12 bits
-        hex_cnt = (width)/4;
+        hex_cnt = (width) / 4;
         println!("--------");
-        println!("Returned msg_processor can_id (bin): {} bits\n{result:#0width$b}",
-                 width, result=test_can_id, width=width+2);
-        println!("Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
-                 hex_cnt, result=test_can_id, width=(hex_cnt as usize)+2);
+        println!(
+            "Returned msg_processor can_id (bin): {} bits\n{result:#0width$b}",
+            width,
+            result = test_can_id,
+            width = width + 2
+        );
+        println!(
+            "Returned msg_processor can_id (hex): {} hexits\n{result:#0width$X} ",
+            hex_cnt,
+            result = test_can_id,
+            width = (hex_cnt as usize) + 2
+        );
         println!("--------");
         //no longer prints out the test_can_msg, because that'd require re-converting
         //it from a Vector into a string of bits, will do if there's time
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
