@@ -6,6 +6,7 @@ use socketcan::*;
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg};
+use std::process;
 use std::{thread, time};
 
 fn main() {
@@ -82,7 +83,11 @@ fn main() {
         )
         .get_matches();
 
-    let channels: Vec<&str> = matches.values_of("channels").unwrap().collect();
+    let channels: Vec<String> = matches
+        .values_of("channels")
+        .unwrap()
+        .map(String::from)
+        .collect();
     let delay: u64 = matches
         .value_of("delay")
         .unwrap()
@@ -112,6 +117,19 @@ fn main() {
 
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
+
+    // Create Handler for keyboard interrupt signal
+    // This will cleanup bus
+    let channel_clone = channels.clone();
+    ctrlc::set_handler(move || {
+        if destroy {
+            for channel in &channel_clone {
+                destroy_bus(channel)
+            }
+        }
+        process::exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
 
     //Setup bus and socket objects
     let mut sockets = Vec::new();
