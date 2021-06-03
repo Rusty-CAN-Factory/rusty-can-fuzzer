@@ -29,7 +29,7 @@ impl SubSec {
         }
     }
 
-    pub fn display(self: &Self) {
+    pub fn display(&self) {
         println!(
             "\t\t{}: \n\
                   \t\tnum_bits {}, holes {:?}, \n\
@@ -65,7 +65,7 @@ impl Section {
         }
     }
 
-    pub fn display(self: &Self) {
+    pub fn display(&self) {
         println!(
             "\t{}: \n\
                   \tnum_bytes {}, is_specified {}, specified_val {}",
@@ -73,7 +73,7 @@ impl Section {
         );
     }
 
-    pub fn display_sub_secs(self: &Self) {
+    pub fn display_sub_secs(&self) {
         for i in 0..self.sub_secs.len() {
             println!("\t\tSubSec #{}: ", i);
             self.sub_secs[i].display();
@@ -109,7 +109,7 @@ impl MsgFormat {
             specified_val,
         }
     }
-    pub fn display(self: &Self) {
+    pub fn display(&self) {
         println!(
             "{}: \n\
                   cob_id_range: {:?}, num_sections {}, \n\
@@ -118,7 +118,7 @@ impl MsgFormat {
         );
     }
 
-    pub fn display_sections(self: &Self) {
+    pub fn display_sections(&self) {
         for i in 0..self.sections.len() {
             println!("\tSection #{}: ", i);
             self.sections[i].display();
@@ -165,44 +165,62 @@ pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut result = 0;
     let msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
+    let mut total_num_bytes = 0;
     for i in 0..msg_format.sections.len() {
         sec_result = section_proc(&msg_format.sections[i]);
+        println!("sec_result {:016X}", sec_result);
         //shifting the bits to make room for the new result
-        result = result << msg_format.sections[i].num_bytes * 8;
+        result <<= msg_format.sections[i].num_bytes * 8;
+        println!("result after shifting the bits {:016X}", result);
         //ORing to add the new result on the end
-        result = result | sec_result;
+        result |= sec_result;
+        println!("New result after ORing with sec_result {:016X}", result);
+        total_num_bytes += msg_format.sections[i].num_bytes;
     }
     //bit shifting the final result so we push the actual
     //code all the way to the left as needed for CAN
-    result = result << 64 - msg_format.sections.len() * 8;
+    //result <<= 64 - msg_format.sections.len() * 8;
+    result <<= 64 - total_num_bytes * 8;
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
     msg_byte_array = result.to_be_bytes();
-    for i in 0..msg_format.sections.len() {
-        msg_byte_vec.push(msg_byte_array[i]);
+    //clippy wanted us to change this, to use the more "Rusty" for loop
+    //style than my more C/C++ style using i
+    for msg in &msg_byte_array {
+        msg_byte_vec.push(*msg); //de-referencing like with array[i] before
     }
     msg_byte_vec
 }
 
 pub fn section_proc(section: &Section) -> u64 {
     let mut sub_sec_result;
-    let mut result = 0;
+    let mut result: u64 = 0;
+    if section.is_specified {
+        return section.specified_val;
+    }
     for i in 0..section.sub_secs.len() {
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
         //shifting the bits to make room for the new result
-        result = result << section.sub_secs[i].num_bits;
+        result <<= section.sub_secs[i].num_bits;
         //ORing to add the new result on the end
-        result = result | sub_sec_result;
+        result |= sub_sec_result as u64;
     }
-    result as u64
+    result
 }
 
 pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
-    let mut rng = rand::thread_rng();
-    let range = 2_u8.pow(sub_sec.num_bits as u32) - 1;
-    let mut result = rng.gen_range(0..range);
+    let mut rng;
+    let range;
+    let mut result;
+    if sub_sec.is_specified {
+        return sub_sec.specified_val;
+    }
+    rng = rand::thread_rng();
+    //u16 instead of u8 because 8 bit long subsecs caused overflow
+    range = 2_u16.pow(sub_sec.num_bits as u32) - 1;
+    result = rng.gen_range(0..range as u8);
     while sub_sec.holes.contains(&result) {
-        result = rng.gen_range(0..range);
+        result = rng.gen_range(0..range as u8);
     }
     result
 }

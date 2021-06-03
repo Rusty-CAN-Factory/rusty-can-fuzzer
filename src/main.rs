@@ -134,29 +134,40 @@ fn main() {
     //EMCY based test format
     let test_msg_format = MsgFormat::new(
         String::from("TestEMCYMsgFormat#1"),
-        //0x080..0xFF, EMCY COB-ID Range
+        //0x080..0x0FF, EMCY COB-ID Range
         //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
         std::ops::Range {
-            start: 128,
-            end: 256,
+            start: 0x080,
+            end: 0x0FF,
         },
-        1,
-        vec![Section::new(
-            String::from("TestEMCYSec#1"),
-            1,
+        3,
+        vec![
+        Section::new(
+            String::from("EmergencyErrorCode"),
+            2,
             vec![
-                SubSec::new(String::from("EmergencyErrorCode"), 2, vec![], false, 0),
-                SubSec::new(String::from("ErrorRegister"), 1, vec![], false, 0),
-                SubSec::new(
-                    String::from("ManufacturerSpecificErrorCode"),
-                    5,
-                    vec![],
-                    false,
-                    0,
-                ),
+                SubSec::new(String::from("EEC#1"), 8, vec![], false, 0),
+                SubSec::new(String::from("EEC#2"), 8, vec![], false, 0),
             ],
             false,
             0,
+        ),
+        Section::new(
+            String::from("ErrorRegister"),
+            1,
+            vec![
+                SubSec::new(String::from("ER#1"), 8, vec![], false, 0),
+            ],
+            false,
+            0,
+        ),
+        Section::new(
+            String::from("ManufacturerSpecificErrorCode"),
+            5,
+            vec![],
+            true,
+            0x00_00_00_00_00, //covering the space of 5 bytes
+
         )],
         false,
         0,
