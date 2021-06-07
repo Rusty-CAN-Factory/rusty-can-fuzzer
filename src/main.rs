@@ -1,5 +1,4 @@
 pub mod can_bus;
-pub mod json_config;
 pub mod msg_processor;
 use can_bus::*;
 use msg_processor::*;
@@ -75,12 +74,22 @@ fn main() {
         .arg(
             Arg::with_name("random_id")
                 .long("random-id")
-                .help("Use a randomly generated ID (this disables -i)"),
+                .help("Use a randomly generated ID (this disables -i)")
+                .conflicts_with_all(&["id", "message_format"]),
         )
         .arg(
             Arg::with_name("random_message")
                 .long("random-message")
-                .help("Use a randomly generated message (this disables -m)"),
+                .help("Use a randomly generated message")
+                .conflicts_with_all(&["message", "message_format"]),
+        )
+        .arg(
+            Arg::with_name("message_format")
+                .short("f")
+                .long("message-format")
+                .takes_value(true)
+                .help("Use a provided message format json file")
+                .conflicts_with_all(&["random_message", "random_id", "message"]),
         )
         .get_matches();
 
@@ -119,6 +128,15 @@ fn main() {
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
 
+    let format_file: String = match matches
+        .value_of("message_format")
+        {
+            Some(s) => s.to_owned(),
+            None => "".to_owned()
+        };
+    
+    let msg_format = read_config(&format_file).unwrap();
+
     // Create Handler for keyboard interrupt signal
     // This will cleanup bus
     let channel_clone = channels.clone();
@@ -132,46 +150,7 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    //EMCY based test format
-    let test_msg_format = MsgFormat::new(
-        String::from("TestEMCYMsgFormat#1"),
-        //0x080..0x0FF, EMCY COB-ID Range
-        //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
-        std::ops::Range {
-            start: 0x080,
-            end: 0x0FF,
-        },
-        3,
-        vec![
-            Section::new(
-                String::from("EmergencyErrorCode"),
-                2,
-                vec![
-                    SubSec::new(String::from("EEC#1"), 8, vec![], false, 0),
-                    SubSec::new(String::from("EEC#2"), 8, vec![], false, 0),
-                ],
-                false,
-                0,
-            ),
-            Section::new(
-                String::from("ErrorRegister"),
-                1,
-                vec![SubSec::new(String::from("ER#1"), 8, vec![], false, 0)],
-                false,
-                0,
-            ),
-            Section::new(
-                String::from("ManufacturerSpecificErrorCode"),
-                5,
-                vec![],
-                true,
-                0x00_00_00_00_00, //covering the space of 5 bytes
-            ),
-        ],
-        false,
-        0,
-    );
-    //Setup bus and socket objects
+    // Setup bus and socket objects
     let mut sockets = Vec::new();
     for channel in &channels {
         create_bus(channel);
@@ -191,12 +170,12 @@ fn main() {
     for _ in 0..repeat {
         for socket in &sockets {
             if random_id {
-                id = random_cob_id(&test_msg_format)
+                id = random_cob_id_with_format(&msg_format)
             }
 
             if random_message {
                 //message_parsed = random_msg()
-                message_parsed = msg_processor(&test_msg_format);
+                message_parsed = msg_processor(&msg_format);
             }
             create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
         }
@@ -208,12 +187,12 @@ fn main() {
         loop {
             for socket in &sockets {
                 if random_id {
-                    id = random_cob_id(&test_msg_format)
+                    id = random_cob_id_with_format(&msg_format)
                 }
 
                 if random_message {
                     //message_parsed = random_msg()
-                    message_parsed = msg_processor(&test_msg_format);
+                    message_parsed = msg_processor(&msg_format);
                 }
                 create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
             }

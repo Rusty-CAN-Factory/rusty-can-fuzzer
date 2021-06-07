@@ -1,9 +1,11 @@
 use chrono::Utc;
 use core::ops::Range;
 use rand::Rng;
-use socketcan::*; //for COB_ID range
+use socketcan::*; 
+use serde::{Deserialize, Serialize};
+use std::{error, fs, io};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct SubSec {
     name: String,
     num_bits: u8,
@@ -39,7 +41,7 @@ impl SubSec {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct Section {
     name: String,
     num_bytes: u8,
@@ -81,7 +83,7 @@ impl Section {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct MsgFormat {
     name: String,
     cob_id_range: Range<u32>,
@@ -126,11 +128,16 @@ impl MsgFormat {
     }
 }
 
-pub fn random_cob_id(msg_format: &MsgFormat) -> u32 {
+pub fn random_cob_id_with_format(msg_format: &MsgFormat) -> u32 {
     let mut rng = rand::thread_rng();
     //total range for cob_id in CANOpen is 0..2_021 (aka 0x0..0x7E5)
     //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
     rng.gen_range(msg_format.cob_id_range.start..msg_format.cob_id_range.end)
+}
+
+pub fn random_cob_id() -> u32 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(0..2_021)
 }
 
 pub fn random_msg() -> Vec<u8> {
@@ -221,14 +228,27 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     result
 }
 
+pub fn read_config(filename: &str) -> Result<MsgFormat, Box<dyn error::Error>> {
+    let file_data = fs::read_to_string(filename)?;
+    serde_json::from_str(&file_data).map_err(|err| Box::new(err) as Box<dyn std::error::Error>)
+}
+
+/// Write configuration object to a json file
+pub fn save_config(filename: &str, config: &MsgFormat) -> Result<(), io::Error> {
+    let json_config = serde_json::to_string(config)?;
+    fs::write(filename, json_config)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn msg_processor_test() {
         let test_can_id: u32;
-        let test_can_msg: Vec<u8>;
+        let _test_can_msg: Vec<u8>;
         let test_msg_format = MsgFormat::new(
             String::from("TestMsgFormat#1"),
             Range {
@@ -271,10 +291,10 @@ mod tests {
             println!("<#-{}-#>", i + 1);
         }
         println!("<#-END-#>");
-        let mut width;
-        let mut hex_cnt;
-        test_can_id = random_cob_id(&test_msg_format);
-        test_can_msg = msg_processor(&test_msg_format);
+        let width;
+        let hex_cnt;
+        test_can_id = random_cob_id_with_format(&test_msg_format);
+        _test_can_msg = msg_processor(&test_msg_format);
         width = 12; //can_id typically expected to be <= 12 bits
         hex_cnt = (width) / 4;
         println!("--------");
@@ -293,5 +313,61 @@ mod tests {
         println!("--------");
         //no longer prints out the test_can_msg, because that'd require re-converting
         //it from a Vector into a string of bits, will do if there's time
+    }
+
+    #[test]
+    fn it_reads_and_writes_json() {
+        // tempdir allows for reading and writing in a directory that will
+        // be created and automatically deleted when the tempdir destructor
+        // is run
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test_output.json");
+        let file_path_str = file_path.to_str().unwrap();
+
+        
+        //EMCY based test format
+        let test_msg_format = MsgFormat::new(
+            String::from("TestEMCYMsgFormat#1"),
+            //0x080..0x0FF, EMCY COB-ID Range
+            //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
+            std::ops::Range {
+                start: 0x080,
+                end: 0x0FF,
+            },
+            3,
+            vec![
+                Section::new(
+                    String::from("EmergencyErrorCode"),
+                    2,
+                    vec![
+                        SubSec::new(String::from("EEC#1"), 8, vec![], false, 0),
+                        SubSec::new(String::from("EEC#2"), 8, vec![], false, 0),
+                    ],
+                    false,
+                    0,
+                ),
+                Section::new(
+                    String::from("ErrorRegister"),
+                    1,
+                    vec![SubSec::new(String::from("ER#1"), 8, vec![], false, 0)],
+                    false,
+                    0,
+                ),
+                Section::new(
+                    String::from("ManufacturerSpecificErrorCode"),
+                    5,
+                    vec![],
+                    true,
+                    0x00_00_00_00_00, //covering the space of 5 bytes
+                ),
+            ],
+            false,
+            0,
+        );
+
+
+        save_config(file_path_str, &test_msg_format).unwrap();
+        let input_values = read_config(file_path_str).unwrap();
+        assert_eq!(input_values, test_msg_format);
     }
 }
