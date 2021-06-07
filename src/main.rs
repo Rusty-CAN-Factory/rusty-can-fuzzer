@@ -142,33 +142,31 @@ fn main() {
         },
         3,
         vec![
-        Section::new(
-            String::from("EmergencyErrorCode"),
-            2,
-            vec![
-                SubSec::new(String::from("EEC#1"), 8, vec![], false, 0),
-                SubSec::new(String::from("EEC#2"), 8, vec![], false, 0),
-            ],
-            false,
-            0,
-        ),
-        Section::new(
-            String::from("ErrorRegister"),
-            1,
-            vec![
-                SubSec::new(String::from("ER#1"), 8, vec![], false, 0),
-            ],
-            false,
-            0,
-        ),
-        Section::new(
-            String::from("ManufacturerSpecificErrorCode"),
-            5,
-            vec![],
-            true,
-            0x00_00_00_00_00, //covering the space of 5 bytes
-
-        )],
+            Section::new(
+                String::from("EmergencyErrorCode"),
+                2,
+                vec![
+                    SubSec::new(String::from("EEC#1"), 8, vec![], false, 0),
+                    SubSec::new(String::from("EEC#2"), 8, vec![], false, 0),
+                ],
+                false,
+                0,
+            ),
+            Section::new(
+                String::from("ErrorRegister"),
+                1,
+                vec![SubSec::new(String::from("ER#1"), 8, vec![], false, 0)],
+                false,
+                0,
+            ),
+            Section::new(
+                String::from("ManufacturerSpecificErrorCode"),
+                5,
+                vec![],
+                true,
+                0x00_00_00_00_00, //covering the space of 5 bytes
+            ),
+        ],
         false,
         0,
     );

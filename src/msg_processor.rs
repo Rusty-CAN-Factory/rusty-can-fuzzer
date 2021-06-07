@@ -168,18 +168,14 @@ pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let mut total_num_bytes = 0;
     for i in 0..msg_format.sections.len() {
         sec_result = section_proc(&msg_format.sections[i]);
-        println!("sec_result {:016X}", sec_result);
         //shifting the bits to make room for the new result
         result <<= msg_format.sections[i].num_bytes * 8;
-        println!("result after shifting the bits {:016X}", result);
         //ORing to add the new result on the end
         result |= sec_result;
-        println!("New result after ORing with sec_result {:016X}", result);
         total_num_bytes += msg_format.sections[i].num_bytes;
     }
     //bit shifting the final result so we push the actual
     //code all the way to the left as needed for CAN
-    //result <<= 64 - msg_format.sections.len() * 8;
     result <<= 64 - total_num_bytes * 8;
     //Chopping up result into a vec<u8>!
     //(done at end because it's simpler to do bit shifting with a single number before now)
