@@ -8,6 +8,8 @@ extern crate clap;
 use clap::{App, Arg};
 use std::process;
 use std::{thread, time};
+use std::path::Path;
+use rand::seq::SliceRandom;
 
 fn main() {
     let matches = App::new("Rusty Can Fuzzer")
@@ -87,6 +89,7 @@ fn main() {
             Arg::with_name("message_format")
                 .short("f")
                 .long("message-format")
+                .value_name("FILE|DIR")
                 .takes_value(true)
                 .help("Use a provided message format json file")
                 .conflicts_with_all(&["random_message", "random_id", "message"]),
@@ -129,9 +132,9 @@ fn main() {
     let random_message: bool = matches.is_present("random_message");
 
     // TODO: Add error handling
-    let msg_format: Option<MsgFormat> = matches
+    let msg_formats: Option<Vec<MsgFormat>> = matches
         .value_of("message_format")
-        .map(|s| read_config(&s).unwrap());
+        .map(|s| read_configs(Path::new(&s)).unwrap());
 
     // Create Handler for keyboard interrupt signal
     // This will cleanup bus
@@ -164,10 +167,13 @@ fn main() {
 
     while repeat != 0 {
         for socket in &sockets {
-            if msg_format.is_some() {
-                let format = msg_format.as_ref();
-                id = random_cob_id_with_format(&format.unwrap());
-                message_parsed = msg_processor(&format.unwrap());
+            if msg_formats.is_some() {
+                let formats = msg_formats.as_ref().unwrap();
+                // Choose random format when multiple provided
+                let format = &formats.choose(&mut rand::thread_rng()).unwrap();
+
+                id = random_cob_id_with_format(&format);
+                message_parsed = msg_processor(&format);
             } else {
                 if random_id {
                     id = random_cob_id()

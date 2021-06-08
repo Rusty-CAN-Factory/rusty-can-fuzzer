@@ -4,6 +4,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use socketcan::*;
 use std::{error, fs, io};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct SubSec {
@@ -232,7 +233,30 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     result
 }
 
-pub fn read_config(filename: &str) -> Result<MsgFormat, Box<dyn error::Error>> {
+pub fn read_configs(path: &Path) -> Result<Vec<MsgFormat>, Box<dyn error::Error>>
+{
+    if !path.is_dir() {
+        // TODO: Add error handling
+        return Ok(vec![read_config(path).unwrap()])
+    }
+
+    let mut result:Vec<MsgFormat> = vec![];
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let filepath = entry.path();
+        if filepath.is_dir() {
+            // TODO: Add error handling
+            result.append(&mut read_configs(&filepath).unwrap());
+        } else { 
+            // TODO: Add error handling
+            result.push(read_config(&filepath).unwrap());
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn read_config(filename: &Path) -> Result<MsgFormat, Box<dyn error::Error>> {
     let file_data = fs::read_to_string(filename)?;
     serde_json::from_str(&file_data).map_err(|err| Box::new(err) as Box<dyn std::error::Error>)
 }
@@ -369,7 +393,7 @@ mod tests {
         );
 
         save_config(file_path_str, &test_msg_format).unwrap();
-        let input_values = read_config(file_path_str).unwrap();
+        let input_values = read_config(Path::new(file_path_str)).unwrap();
         assert_eq!(input_values, test_msg_format);
     }
 }
