@@ -3,8 +3,11 @@ use core::ops::Range;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use socketcan::*;
-use std::{error, fs, io};
+use std::error::Error;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::Path;
+use std::{error, fs, io};
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct SubSec {
@@ -155,9 +158,9 @@ pub fn create_frame_send_msg(
     data: &[u8],
     rtr: bool,
     err: bool,
-) {
+) -> Result<CANFrame, Box<dyn Error>> {
     let frame = CANFrame::new(cob_id, data, rtr, err).unwrap();
-    cs.write_frame(&frame).unwrap();
+    cs.write_frame(&frame)?;
     let mut formatted_data = "".to_owned();
     for item in data {
         formatted_data = format!("{}{:02X?} ", formatted_data, item);
@@ -169,6 +172,8 @@ pub fn create_frame_send_msg(
         format!("0x{:03X?}", cob_id),
         formatted_data
     );
+
+    Ok(frame)
 }
 
 //returns a Vector of u8 chunks containing the message
@@ -233,21 +238,20 @@ pub fn sub_sec_proc(sub_sec: &SubSec) -> u8 {
     result
 }
 
-pub fn read_configs(path: &Path) -> Result<Vec<MsgFormat>, Box<dyn error::Error>>
-{
+pub fn read_configs(path: &Path) -> Result<Vec<MsgFormat>, Box<dyn error::Error>> {
     if !path.is_dir() {
         // TODO: Add error handling
-        return Ok(vec![read_config(path).unwrap()])
+        return Ok(vec![read_config(path).unwrap()]);
     }
 
-    let mut result:Vec<MsgFormat> = vec![];
+    let mut result: Vec<MsgFormat> = vec![];
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         let filepath = entry.path();
         if filepath.is_dir() {
             // TODO: Add error handling
             result.append(&mut read_configs(&filepath).unwrap());
-        } else { 
+        } else {
             // TODO: Add error handling
             result.push(read_config(&filepath).unwrap());
         }
@@ -266,6 +270,43 @@ pub fn save_config(filename: &str, config: &MsgFormat) -> Result<(), io::Error> 
     let json_config = serde_json::to_string(config)?;
     fs::write(filename, json_config)?;
     Ok(())
+}
+
+pub fn listen(
+    socket: &CANSocket,
+    channel: &str,
+    logfile: &Path,
+    tx_frame: CANFrame,
+) -> std::io::Result<()> {
+    fn write(frame: CANFrame, channel: &str, logfile: &Path, note: &str) -> std::io::Result<()> {
+        // TODO: Make log configurable
+        // TODO: Add error handling
+        // TODO: Move formatting to seperate fn
+        let mut formatted_data = "".to_owned();
+        for item in frame.data() {
+            formatted_data = format!("{}{:02X?} ", formatted_data, item);
+        }
+        let buffer: String = format!(
+            "{0:<3} {1:<30} {2:<8} {3:<10} {4:<25}\n",
+            note,
+            Utc::now().naive_local().format("[%a %b %e %H:%M:%S %Y]:"),
+            channel,
+            format!("0x{:03X?}", frame.id()),
+            formatted_data
+        );
+
+        let mut file = OpenOptions::new().append(true).create(true).open(logfile).unwrap();
+        file.write_all(buffer.as_bytes())?;
+        Ok(())
+    }
+
+    match socket.read_frame() {
+        Ok(frame) => {
+            write(tx_frame, channel, logfile, "TX").unwrap();
+            write(frame, channel, logfile, "RX")
+        }
+        _ => Ok(()),
+    }
 }
 
 #[cfg(test)]

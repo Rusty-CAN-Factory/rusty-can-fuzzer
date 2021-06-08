@@ -6,10 +6,10 @@ use socketcan::*;
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg};
+use rand::seq::SliceRandom;
+use std::path::Path;
 use std::process;
 use std::{thread, time};
-use std::path::Path;
-use rand::seq::SliceRandom;
 
 fn main() {
     let matches = App::new("Rusty Can Fuzzer")
@@ -76,7 +76,7 @@ fn main() {
         .arg(
             Arg::with_name("random_id")
                 .long("random-id")
-                .help("Use a randomly generated ID (this disables -i)")
+                .help("Use a randomly generated ID")
                 .conflicts_with_all(&["id", "message_format"]),
         )
         .arg(
@@ -93,6 +93,23 @@ fn main() {
                 .takes_value(true)
                 .help("Use a provided message format json file")
                 .conflicts_with_all(&["random_message", "random_id", "message"]),
+        )
+        .arg(
+            Arg::with_name("listen_mode")
+                .short("l")
+                .long("listen")
+                .help(
+                    "Enable listen mode to log responses during delay, delay is shortened \
+                       when responses are heard",
+                ),
+            )
+        .arg(
+            Arg::with_name("listen_log")
+                .long("listen-log")
+                .takes_value(true)
+                .default_value("log.txt")
+                .value_name("FILE")
+                .help("Listen mode log file for storing responses"),
         )
         .get_matches();
 
@@ -149,6 +166,9 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let listen_mode = matches.is_present("listen_mode");
+    let listen_log = Path::new(matches.value_of("listen_log").unwrap());
+
     // Setup bus and socket objects
     let mut sockets = Vec::new();
     for channel in &channels {
@@ -158,6 +178,12 @@ fn main() {
 
     let delay_seconds = time::Duration::from_secs(delay);
 
+    // In listen mode read timeout is used as delay
+    if listen_mode {
+        for socket in &sockets {
+            socket.0.set_read_timeout(delay_seconds).unwrap();
+        }
+    }
     // Print Banner Message
     println!(
         "{0:<30} {1:<8} {2:<10} {3:<25}",
@@ -183,14 +209,22 @@ fn main() {
                 }
             }
 
-            create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
+            let frame =
+                create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
+            if listen_mode {
+                if frame.is_ok() {
+                    listen(&socket.0, &socket.1, listen_log, frame.unwrap()).unwrap();
+                }
+            }
         }
 
         if repeat != -1 {
             repeat -= 1;
         }
 
-        thread::sleep(delay_seconds);
+        if !listen_mode {
+            thread::sleep(delay_seconds);
+        }
     }
 
     // Tear down bus
