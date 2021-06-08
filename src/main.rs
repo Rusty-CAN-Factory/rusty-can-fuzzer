@@ -160,7 +160,7 @@ fn main() {
         "{0:<30} {1:<8} {2:<10} {3:<25}",
         "Timestamp", "Channel", "COB ID", "Message"
     );
-    println!("{:-<73}", "");
+    println!("{:-<75}", "");
 
     while repeat != 0 {
         for socket in &sockets {
