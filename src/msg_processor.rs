@@ -1,8 +1,8 @@
 use chrono::Utc;
 use core::ops::Range;
 use rand::Rng;
-use socketcan::*; 
 use serde::{Deserialize, Serialize};
+use socketcan::*;
 use std::{error, fs, io};
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
@@ -324,7 +324,6 @@ mod tests {
         let file_path = dir.path().join("test_output.json");
         let file_path_str = file_path.to_str().unwrap();
 
-        
         //EMCY based test format
         let test_msg_format = MsgFormat::new(
             String::from("TestEMCYMsgFormat#1"),
@@ -364,7 +363,6 @@ mod tests {
             false,
             0,
         );
-
 
         save_config(file_path_str, &test_msg_format).unwrap();
         let input_values = read_config(file_path_str).unwrap();

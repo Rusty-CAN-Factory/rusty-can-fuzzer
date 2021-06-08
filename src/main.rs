@@ -115,7 +115,7 @@ fn main() {
         })
         .collect();
 
-    let repeat: i64 = match matches.value_of("repeat").unwrap_or("1").parse() {
+    let mut repeat: i64 = match matches.value_of("repeat").unwrap_or("1").parse() {
         Ok(v) if v < -1 => panic!(
             "Unable to parse repeat value, should be a postitive integer value \
              (or -1 for infinite repeat), {} provided",
@@ -128,14 +128,10 @@ fn main() {
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
 
-    let format_file: String = match matches
+    // TODO: Add error handling
+    let msg_format: Option<MsgFormat> = matches
         .value_of("message_format")
-        {
-            Some(s) => s.to_owned(),
-            None => "".to_owned()
-        };
-    
-    let msg_format = read_config(&format_file).unwrap();
+        .map(|s| read_config(&s).unwrap());
 
     // Create Handler for keyboard interrupt signal
     // This will cleanup bus
@@ -166,38 +162,29 @@ fn main() {
     );
     println!("{:-<73}", "");
 
-    // Send messages repeat times
-    for _ in 0..repeat {
+    while repeat != 0 {
         for socket in &sockets {
-            if random_id {
-                id = random_cob_id_with_format(&msg_format)
+            if msg_format.is_some() {
+                let format = msg_format.as_ref();
+                id = random_cob_id_with_format(&format.unwrap());
+                message_parsed = msg_processor(&format.unwrap());
+            } else {
+                if random_id {
+                    id = random_cob_id()
+                }
+                if random_message {
+                    message_parsed = random_msg();
+                }
             }
 
-            if random_message {
-                //message_parsed = random_msg()
-                message_parsed = msg_processor(&msg_format);
-            }
             create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
         }
-        thread::sleep(delay_seconds);
-    }
 
-    // Send messages infinite times when repeat is -1
-    if repeat == -1 {
-        loop {
-            for socket in &sockets {
-                if random_id {
-                    id = random_cob_id_with_format(&msg_format)
-                }
-
-                if random_message {
-                    //message_parsed = random_msg()
-                    message_parsed = msg_processor(&msg_format);
-                }
-                create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
-            }
-            thread::sleep(delay_seconds);
+        if repeat != -1 {
+            repeat -= 1;
         }
+
+        thread::sleep(delay_seconds);
     }
 
     // Tear down bus
