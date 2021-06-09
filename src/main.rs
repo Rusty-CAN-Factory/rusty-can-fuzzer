@@ -212,8 +212,8 @@ fn main() {
             let frame =
                 create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
             if listen_mode {
-                if frame.is_ok() {
-                    listen(&socket.0, &socket.1, listen_log, frame.unwrap()).unwrap();
+                if let Ok(f) = frame {
+                    listen(&socket.0, &socket.1, listen_log, f).unwrap()
                 }
             }
         }
