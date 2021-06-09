@@ -62,6 +62,17 @@ In a new terminal:
 
 > Ctrl+c to exit
 
+### Run with Listening Mode on
+First, start a listening terminal (which will be in charge of starting and closing the can bus):
+
+> cargo run -- -l --listen-log log-file-name -r -1
+
+Start a sending terminal (which should have the --no-destroy option so the can bus isn't destroyed prematurely):
+
+> cargo run -- --message-format msgfmt-directory-file-name -r -1 --no-destroy
+
+> ctrl+c both terminals to exit
+
 ### View Help to see all options
 > clear && cargo run -- -h
 

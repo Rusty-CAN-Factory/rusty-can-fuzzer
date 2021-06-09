@@ -19,7 +19,6 @@ pub fn create_bus(name: &str) {
 
     if !output.stderr.is_empty() {
         io::stderr().write_all(&output.stderr).unwrap();
-        //panic!("Unable to create bus {}, it may already be created", name)
     }
 
     let output = Command::new("sudo")

@@ -1,0 +1,56 @@
+{
+    "name": "TestEMCYMsgFormat#1",
+    "cob_id_range": {
+      "start": 128,
+      "end": 255
+    },
+    "num_sections": 3,
+    "sections": [
+      {
+        "name": "ErrorRegister",
+        "num_bytes": 1,
+        "sub_secs": [
+          {
+            "name": "ER#1",
+            "num_bits": 8,
+            "holes": [],
+            "is_specified": false,
+            "specified_val": 0
+          }
+        ],
+        "is_specified": true,
+        "specified_val": 1
+      },
+      {
+        "name": "ManufacturerSpecificErrorCode",
+        "num_bytes": 5,
+        "sub_secs": [],
+        "is_specified": true,
+        "specified_val": 2
+      },
+      {
+        "name": "EmergencyErrorCode",
+        "num_bytes": 2,
+        "sub_secs": [
+          {
+            "name": "EEC#1",
+            "num_bits": 8,
+            "holes": [],
+            "is_specified": false,
+            "specified_val": 0
+          },
+          {
+            "name": "EEC#2",
+            "num_bits": 8,
+            "holes": [],
+            "is_specified": false,
+            "specified_val": 0
+          }
+        ],
+        "is_specified": false,
+        "specified_val": 0
+      }
+    ],
+    "is_specified": false,
+    "specified_val": 0
+  }

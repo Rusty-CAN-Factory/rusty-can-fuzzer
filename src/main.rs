@@ -6,6 +6,8 @@ use socketcan::*;
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg};
+use rand::seq::SliceRandom;
+use std::path::Path;
 use std::process;
 use std::{thread, time};
 
@@ -74,7 +76,7 @@ fn main() {
         .arg(
             Arg::with_name("random_id")
                 .long("random-id")
-                .help("Use a randomly generated ID (this disables -i)")
+                .help("Use a randomly generated ID")
                 .conflicts_with_all(&["id", "message_format"]),
         )
         .arg(
@@ -87,9 +89,27 @@ fn main() {
             Arg::with_name("message_format")
                 .short("f")
                 .long("message-format")
+                .value_name("FILE|DIR")
                 .takes_value(true)
                 .help("Use a provided message format json file")
                 .conflicts_with_all(&["random_message", "random_id", "message"]),
+        )
+        .arg(
+            Arg::with_name("listen_mode")
+                .short("l")
+                .long("listen")
+                .help(
+                    "Enable listen mode to log responses during delay, delay is shortened \
+                       when responses are heard",
+                ),
+        )
+        .arg(
+            Arg::with_name("listen_log")
+                .long("listen-log")
+                .takes_value(true)
+                .default_value("log.txt")
+                .value_name("FILE")
+                .help("Listen mode log file for storing responses"),
         )
         .get_matches();
 
@@ -128,13 +148,12 @@ fn main() {
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
 
-    // TODO: Add error handling
-    let msg_format: Option<MsgFormat> = matches
+    let msg_formats: Option<Vec<MsgFormat>> = matches
         .value_of("message_format")
-        .map(|s| read_config(&s).unwrap());
+        .map(|s| read_configs(Path::new(&s)).unwrap());
 
     // Create Handler for keyboard interrupt signal
-    // This will cleanup bus
+    // This will cleanup bus when exiting with control+c
     let channel_clone = channels.clone();
     ctrlc::set_handler(move || {
         if destroy {
@@ -146,6 +165,9 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let listen_mode = matches.is_present("listen_mode");
+    let listen_log = Path::new(matches.value_of("listen_log").unwrap());
+
     // Setup bus and socket objects
     let mut sockets = Vec::new();
     for channel in &channels {
@@ -155,19 +177,29 @@ fn main() {
 
     let delay_seconds = time::Duration::from_secs(delay);
 
+    // In listen mode read timeout is used as delay
+    if listen_mode {
+        for socket in &sockets {
+            socket.0.set_read_timeout(delay_seconds).unwrap();
+        }
+    }
     // Print Banner Message
     println!(
         "{0:<30} {1:<8} {2:<10} {3:<25}",
         "Timestamp", "Channel", "COB ID", "Message"
     );
-    println!("{:-<73}", "");
+    println!("{:-<75}", "");
 
+    // Main app loop
     while repeat != 0 {
         for socket in &sockets {
-            if msg_format.is_some() {
-                let format = msg_format.as_ref();
-                id = random_cob_id_with_format(&format.unwrap());
-                message_parsed = msg_processor(&format.unwrap());
+            if msg_formats.is_some() {
+                let formats = msg_formats.as_ref().unwrap();
+                // Choose random format when multiple provided
+                let format = &formats.choose(&mut rand::thread_rng()).unwrap();
+
+                id = random_cob_id_with_format(&format);
+                message_parsed = msg_processor(&format);
             } else {
                 if random_id {
                     id = random_cob_id()
@@ -177,14 +209,23 @@ fn main() {
                 }
             }
 
-            create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
+            let frame =
+                create_frame_send_msg(&socket.0, &socket.1, id, &message_parsed, false, false);
+            if listen_mode {
+                if let Ok(f) = frame {
+                    listen(&socket.0, &socket.1, listen_log, f).unwrap()
+                }
+            }
         }
 
         if repeat != -1 {
             repeat -= 1;
         }
 
-        thread::sleep(delay_seconds);
+        // listen mode uses blocking read to add delay
+        if !listen_mode {
+            thread::sleep(delay_seconds);
+        }
     }
 
     // Tear down bus
