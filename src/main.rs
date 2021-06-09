@@ -102,7 +102,7 @@ fn main() {
                     "Enable listen mode to log responses during delay, delay is shortened \
                        when responses are heard",
                 ),
-            )
+        )
         .arg(
             Arg::with_name("listen_log")
                 .long("listen-log")
@@ -148,13 +148,12 @@ fn main() {
     let random_id: bool = matches.is_present("random_id");
     let random_message: bool = matches.is_present("random_message");
 
-    // TODO: Add error handling
     let msg_formats: Option<Vec<MsgFormat>> = matches
         .value_of("message_format")
         .map(|s| read_configs(Path::new(&s)).unwrap());
 
     // Create Handler for keyboard interrupt signal
-    // This will cleanup bus
+    // This will cleanup bus when exiting with control+c
     let channel_clone = channels.clone();
     ctrlc::set_handler(move || {
         if destroy {
@@ -191,6 +190,7 @@ fn main() {
     );
     println!("{:-<75}", "");
 
+    // Main app loop
     while repeat != 0 {
         for socket in &sockets {
             if msg_formats.is_some() {
@@ -222,6 +222,7 @@ fn main() {
             repeat -= 1;
         }
 
+        // listen mode uses blocking read to add delay
         if !listen_mode {
             thread::sleep(delay_seconds);
         }
