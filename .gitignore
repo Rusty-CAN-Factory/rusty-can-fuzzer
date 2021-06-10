@@ -16,3 +16,6 @@ Cargo.lock
 
 *.swp
 *.vim
+log.txt
+.DS_STORE
+.vscode

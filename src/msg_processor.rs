@@ -1,5 +1,6 @@
 use chrono::Utc;
 use core::ops::Range;
+use rand::seq::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use socketcan::*;
@@ -99,6 +100,7 @@ impl Section {
 pub struct MsgFormat {
     name: String,
     cob_id_range: Range<u32>,
+    cob_id_values: Vec<u32>,
     num_sections: u8,
     sections: Vec<Section>,
     is_specified: bool,
@@ -110,6 +112,7 @@ impl MsgFormat {
     pub fn new(
         name: String,
         cob_id_range: Range<u32>,
+        cob_id_values: Vec<u32>,
         num_sections: u8,
         sections: Vec<Section>,
         is_specified: bool,
@@ -118,6 +121,7 @@ impl MsgFormat {
         Self {
             name,
             cob_id_range,
+            cob_id_values,
             num_sections,
             sections,
             is_specified,
@@ -144,17 +148,26 @@ impl MsgFormat {
     }
 }
 
-/// Generate a random cob_id within message format allowed range
+/// Generate a random cob_id within message format allowed range or from provided COB-ID list
+/// cob_id_values takes precedence over cob_id_range
 pub fn random_cob_id_with_format(msg_format: &MsgFormat) -> u32 {
+    if !msg_format.cob_id_values.is_empty() {
+        return msg_format
+            .cob_id_values
+            .choose(&mut rand::thread_rng())
+            .unwrap()
+            .to_owned();
+    }
+
     let mut rng = rand::thread_rng();
-    //total range for cob_id in CANOpen is 0..2_021 (aka 0x0..0x7E5)
-    //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
     rng.gen_range(msg_format.cob_id_range.start..msg_format.cob_id_range.end)
 }
 
 /// Generate any random cob_id
 /// Uses the valid range 0..2_021
 pub fn random_cob_id() -> u32 {
+    //total range for cob_id in CANOpen is 0..2_021 (aka 0x0..0x7E5)
+    //https://en.wikipedia.org/wiki/CANopen#Predefined_Connection_Set[7]
     let mut rng = rand::thread_rng();
     rng.gen_range(0..2_021)
 }
@@ -200,13 +213,18 @@ pub fn msg_processor(msg_format: &MsgFormat) -> Vec<u8> {
     let msg_byte_array;
     let mut msg_byte_vec: Vec<u8> = Vec::new();
     let mut total_num_bytes = 0;
-    for i in 0..msg_format.sections.len() {
-        sec_result = section_proc(&msg_format.sections[i]);
-        // shifting the bits to make room for the new result
-        result <<= msg_format.sections[i].num_bytes * 8;
-        // ORing to add the new result on the end
-        result |= sec_result;
-        total_num_bytes += msg_format.sections[i].num_bytes;
+    if msg_format.sections.len() == 1 {
+        result = section_proc(&msg_format.sections[0]);
+        total_num_bytes += msg_format.sections[0].num_bytes;
+    } else {
+        for i in 0..msg_format.sections.len() {
+            sec_result = section_proc(&msg_format.sections[i]);
+            // shifting the bits to make room for the new result
+            result <<= msg_format.sections[i].num_bytes * 8;
+            // ORing to add the new result on the end
+            result |= sec_result;
+            total_num_bytes += msg_format.sections[i].num_bytes;
+        }
     }
     // bit shifting the final result so we push the actual
     // code all the way to the left as needed for CAN
@@ -228,6 +246,17 @@ fn section_proc(section: &Section) -> u64 {
     if section.is_specified {
         return section.specified_val;
     }
+
+    if section.sub_secs.is_empty() {
+        let mut rng = rand::thread_rng();
+        let mut max: u64 = 0xFF;
+        for _ in 0..section.num_bytes {
+            max <<= 8;
+            max += 0xFF;
+        }
+        return rng.gen_range(0..max);
+    }
+
     for i in 0..section.sub_secs.len() {
         sub_sec_result = sub_sec_proc(&section.sub_secs[i]);
         //shifting the bits to make room for the new result
@@ -348,6 +377,7 @@ mod tests {
                 start: 0,
                 end: 2_021,
             },
+            vec![],
             2,
             vec![
                 Section::new(
@@ -426,6 +456,7 @@ mod tests {
                 start: 0x080,
                 end: 0x0FF,
             },
+            vec![],
             3,
             vec![
                 Section::new(
@@ -460,5 +491,25 @@ mod tests {
         save_config(file_path_str, &test_msg_format).unwrap();
         let input_values = read_config(Path::new(file_path_str)).unwrap();
         assert_eq!(input_values, test_msg_format);
+    }
+
+    #[test]
+    fn it_works_with_single_section_random_bytes() {
+        let test_msg_format = MsgFormat::new(
+            String::from("Test"),
+            std::ops::Range {
+                start: 0x080,
+                end: 0x0FF,
+            },
+            vec![],
+            1,
+            vec![Section::new(String::from("Section"), 8, vec![], false, 0)],
+            false,
+            0,
+        );
+
+        // Ensure randomizer does not panic
+        random_cob_id_with_format(&test_msg_format);
+        msg_processor(&test_msg_format);
     }
 }
