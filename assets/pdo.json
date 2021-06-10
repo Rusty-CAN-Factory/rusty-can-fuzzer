@@ -1,0 +1,31 @@
+{
+    "name": "PDONode0",
+    "cob_id_range": {
+      "start": 0,
+      "end": 0
+    },
+    "cob_id_values": [
+      511,
+      767,
+      1023,
+      1279,
+      512,
+      768,
+      1024,
+      1280,
+      513,
+      769
+    ],
+    "num_sections": 1,
+    "sections": [
+      {
+        "name": "DATA",
+        "num_bytes": 8,
+        "sub_secs": [],
+        "is_specified": false,
+        "specified_val": 0
+      }
+    ],
+    "is_specified": false,
+    "specified_val": 0
+  }
